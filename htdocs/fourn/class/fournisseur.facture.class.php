@@ -1870,14 +1870,20 @@ class FactureFournisseur extends CommonInvoice
 		// Set the model on the model name to use
 		if (! dol_strlen($modele))
 		{
+                    return false;
+                    var_dump($modele);
 			if (! empty($conf->global->INVOICE_SUPPLIER_ADDON_PDF))
 			{
 				$modele = $conf->global->INVOICE_SUPPLIER_ADDON_PDF;
+                                
 			}
 			else
 			{
+                            
+                            return true;
 				$modele = 'canelle';
 			}
+                        
 		}
 
 		$modelpath = "core/modules/supplier_invoice/pdf/";
