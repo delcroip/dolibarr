@@ -371,7 +371,6 @@ ALTER TABLE llx_product_lang ADD COLUMN import_key varchar(14) DEFAULT NULL;
 
 ALTER TABLE llx_actioncomm MODIFY COLUMN elementtype varchar(255) DEFAULT NULL;
 
-DELETE FROM llx_menu where module='expensereport';
 
 ALTER TABLE llx_accounting_system DROP COLUMN fk_pays;
 ALTER TABLE llx_accounting_account ADD COLUMN fk_accounting_category integer DEFAULT 0 after label;
@@ -396,8 +395,8 @@ INSERT INTO llx_c_accounting_category (rowid, code, label, range_account, sens, 
 INSERT INTO llx_c_accounting_category (rowid, code, label, range_account, sens, category_type, formula, position, fk_country, active) VALUES (  3,'MARGE',"Marge commerciale", '', 0, 1, '1 + 2', '30', 1, 1);
 
 UPDATE llx_accounting_account SET account_parent = '0' WHERE account_parent = '';
--- VMYSQL4.1 ALTER TABLE llx_accounting_account MODIFY COLUMN account_parent integer DEFAULT 0;
--- VPGSQL8.2 ALTER TABLE llx_accounting_account ALTER COLUMN account_parent TYPE integer USING account_parent::integer;
+-- VMYSQL4.1 ALTER TABLE llx_accounting_account MODIFY COLUMN account_parent varchar(32) DEFAULT '0';
+-- VPGSQL8.2 ALTER TABLE llx_accounting_account ALTER COLUMN account_parent SET DEFAULT '0';
 
 CREATE TABLE llx_accounting_journal
 (

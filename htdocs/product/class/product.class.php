@@ -195,6 +195,8 @@ class Product extends CommonObject
 	var $buyprice;
 	public $fourn_pu;
 
+	public $fourn_price_base_type;
+    
 	/**
 	 * @deprecated
 	 * @see ref_supplier
@@ -923,10 +925,26 @@ class Product extends CommonObject
                 // End call triggers
 			}
 
+			// Delete from product_batch on product delete	
+			if (! $error)
+			{
+				$sql = "DELETE FROM ".MAIN_DB_PREFIX.'product_batch';
+				$sql.= " WHERE fk_product_stock IN (";
+				$sql.= "SELECT rowid FROM ".MAIN_DB_PREFIX.'product_stock';
+				$sql.= " WHERE fk_product = ".$id.")";
+				dol_syslog(get_class($this).'::delete', LOG_DEBUG);
+				$result = $this->db->query($sql);
+				if (! $result)
+				{
+					$error++;
+					$this->errors[] = $this->db->lasterror();
+				}
+			}
+			
    			// Delete all child tables
 			if (! $error)
 			{
-				$elements = array('product_fournisseur_price','product_price','product_lang','categorie_product','product_stock','product_customer_price','product_lot');
+				$elements = array('product_fournisseur_price','product_price','product_lang','categorie_product','product_stock','product_customer_price','product_lot'); // product_batch is done before
     			foreach($elements as $table)
     			{
     				if (! $error)
@@ -1314,12 +1332,13 @@ class Product extends CommonObject
 	 *  This also set some properties on product like ->buyprice, ->fourn_pu, ...
 	 *
 	 *  @param     	int		$prodfournprice     Id du tarif = rowid table product_fournisseur_price
-	 *  @param     	double	$qty                Quantity asked
+	 *  @param     	double	$qty                Quantity asked or -1 to get first entry found
 	 *	@param		int		$product_id			Filter on a particular product id
-	 * 	@param		string	$fourn_ref			Filter on a supplier ref. 'none' to exclude ref in search.
+	 * 	@param		string	$fourn_ref			Filter on a supplier price ref. 'none' to exclude ref in search.
+	 *  @param      int     $fk_soc             If of supplier
 	 *  @return    	int 						<-1 if KO, -1 if qty not enough, 0 if OK but nothing found, id_product if OK and found. May also initialize some properties like (->ref_supplier, buyprice, fourn_pu, vatrate_supplier...)
 	 */
-	function get_buyprice($prodfournprice, $qty, $product_id=0, $fourn_ref='')
+	function get_buyprice($prodfournprice, $qty, $product_id=0, $fourn_ref='', $fk_soc=0)
 	{
 		global $conf;
 		$result = 0;
@@ -1337,7 +1356,7 @@ class Product extends CommonObject
 		if ($resql)
 		{
 			$obj = $this->db->fetch_object($resql);
-			if ($obj && $obj->quantity > 0)		// If found
+			if ($obj && $obj->quantity > 0)		// If we found a supplier prices from the id of supplier price
 			{
                 if (!empty($conf->dynamicprices->enabled) && !empty($obj->fk_supplier_price_expression))
                 {
@@ -1355,7 +1374,8 @@ class Product extends CommonObject
                     }
                 }
 				$this->buyprice = $obj->price;                      // deprecated
-				$this->fourn_pu = $obj->price / $obj->quantity;     // Prix unitaire du produit pour le fournisseur $fourn_id
+				$this->fourn_pu = $obj->price / $obj->quantity;     // Unit price of product of supplier
+				$this->fourn_price_base_type = 'HT';                // Price base type
 				$this->ref_fourn = $obj->ref_fourn;                 // deprecated
 				$this->ref_supplier = $obj->ref_fourn;              // Ref supplier
 				$this->vatrate_supplier = $obj->tva_tx;             // Vat ref supplier
@@ -1364,12 +1384,13 @@ class Product extends CommonObject
 			}
 			else // If not found
 			{
-				// We do a second search by doing a select again but searching with qty and id product
+				// We do a second search by doing a select again but searching with less reliable criteria: couple qty/id product, and if set fourn_ref or fk_soc.
 				$sql = "SELECT pfp.rowid, pfp.price as price, pfp.quantity as quantity, pfp.fk_soc,";
 				$sql.= " pfp.fk_product, pfp.ref_fourn as ref_supplier, pfp.tva_tx, pfp.fk_supplier_price_expression";
 				$sql.= " FROM ".MAIN_DB_PREFIX."product_fournisseur_price as pfp";
 				$sql.= " WHERE pfp.fk_product = ".$product_id;
 				if ($fourn_ref != 'none') $sql.= " AND pfp.ref_fourn = '".$fourn_ref."'";
+				if ($fk_soc > 0) $sql.= " AND pfp.fk_soc = ".$fk_soc;
 				if ($qty > 0) $sql.= " AND pfp.quantity <= ".$qty;
 				$sql.= " ORDER BY pfp.quantity DESC";
 				$sql.= " LIMIT 1";
@@ -1397,8 +1418,9 @@ class Product extends CommonObject
 		                    }
 		                }
 						$this->buyprice = $obj->price;                      // deprecated
-						$this->fourn_qty = $obj->quantity;					// min quantity for price
-						$this->fourn_pu = $obj->price / $obj->quantity;     // Prix unitaire du produit pour le fournisseur $fourn_id
+						$this->fourn_qty = $obj->quantity;					// min quantity for price for a virtual supplier
+						$this->fourn_pu = $obj->price / $obj->quantity;     // Unit price of product for a virtual supplier
+						$this->fourn_price_base_type = 'HT';                // Price base type for a virtual supplier
 						$this->ref_fourn = $obj->ref_supplier;              // deprecated
 						$this->ref_supplier = $obj->ref_supplier;           // Ref supplier
 						$this->vatrate_supplier = $obj->tva_tx;             // Vat ref supplier

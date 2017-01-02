@@ -680,8 +680,8 @@ if (empty($reshook))
 	        $objectline->qty=GETPOST('elqty');
 	        $objectline->remise_percent=GETPOST('elremise_percent');
 	        $objectline->tva_tx=GETPOST('eltva_tx')?GETPOST('eltva_tx'):0;	// Field may be disabled, so we use vat rate 0
-	        $objectline->localtax1_tx=$localtax1_tx;
-	        $objectline->localtax2_tx=$localtax2_tx;
+	        $objectline->localtax1_tx=is_numeric($localtax1_tx)?$localtax1_tx:0;
+	        $objectline->localtax2_tx=is_numeric($localtax2_tx)?$localtax2_tx:0;
 	        $objectline->date_ouverture_prevue=$date_start_update;
 	        $objectline->date_ouverture=$date_start_real_update;
 	        $objectline->date_fin_validite=$date_end_update;
@@ -1452,7 +1452,7 @@ else
             {
                 $total = 0;
 
-                print '<tr class="liste_titre">';
+                print '<tr class="liste_titre'.($cursorline?' liste_titre_add':'').'">';
                 print '<td>'.$langs->trans("ServiceNb",$cursorline).'</td>';
                 print '<td width="50" align="center">'.$langs->trans("VAT").'</td>';
                 print '<td width="50" align="right">'.$langs->trans("PriceUHT").'</td>';

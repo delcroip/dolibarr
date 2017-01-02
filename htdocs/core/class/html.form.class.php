@@ -1125,7 +1125,7 @@ class Form
         $resql=$this->db->query($sql);
         if ($resql)
         {
-            print '<select class="flat" name="'.$htmlname.'">';
+            print '<select class="flat maxwidthonsmartphone" name="'.$htmlname.'">';
             $num = $this->db->num_rows($resql);
 
             $qualifiedlines=$num;
@@ -3263,7 +3263,7 @@ class Form
      *     @param	int			$width				Force width of bow
      *     @return 	string      	    			HTML ajax code if a confirm ajax popup is required, Pure HTML code if it's an html form
      */
-    function formconfirm($page, $title, $question, $action, $formquestion='', $selectedchoice="", $useajax=0, $height=170, $width=500)
+    function formconfirm($page, $title, $question, $action, $formquestion='', $selectedchoice="", $useajax=0, $height=200, $width=500)
     {
         global $langs,$conf;
         global $useglobalvars;
@@ -5727,6 +5727,7 @@ class Form
                 else $file=get_exdir(0, 0, 0, 0, $object, 'thirdparty').'/logos/'.$object->logo;
                 $originalfile=get_exdir(0, 0, 0, 0, $object, 'thirdparty').'/logos/'.$object->logo;
             }
+            $email=$object->email;
         }
         else if ($modulepart=='contact')
         {
@@ -5738,6 +5739,7 @@ class Form
                 else $file=get_exdir(0, 0, 0, 0, $object, 'contact').'/photos/'.$object->photo;
                 $originalfile=get_exdir(0, 0, 0, 0, $object, 'contact').'/photos/'.$object->photo;
             }
+            $email=$object->email;
         }
         else if ($modulepart=='userphoto')
         {

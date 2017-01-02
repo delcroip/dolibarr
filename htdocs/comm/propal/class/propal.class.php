@@ -651,6 +651,7 @@ class Propal extends CommonObject
             //Fetch current line from the database and then clone the object and set it in $oldline property
             $line = new PropaleLigne($this->db);
             $line->fetch($rowid);
+			$line->fetch_optionals(); // Fetch extrafields for oldcopy
 
 			$staticline = clone $line;
 
@@ -926,7 +927,7 @@ class Propal extends CommonObject
 
                     for ($i=0;$i<$num;$i++)
                     {
-                        // Reset fk_parent_line for no child products and special product
+                        // Reset fk_parent_line for line that are not child lines or special product
                         if (($this->lines[$i]->product_type != 9 && empty($this->lines[$i]->fk_parent_line)) || $this->lines[$i]->product_type == 9) {
                             $fk_parent_line = 0;
                         }
@@ -942,7 +943,7 @@ class Propal extends CommonObject
 							$this->lines[$i]->remise_percent,
 							'HT',
 							0,
-							0,
+							$this->lines[$i]->info_bits,
 							$this->lines[$i]->product_type,
 							$this->lines[$i]->rang,
 							$this->lines[$i]->special_code,
@@ -1158,6 +1159,7 @@ class Propal extends CommonObject
         $clonedObj->ref = $modPropale->getNextValue($objsoc,$clonedObj);
 
         // Create clone
+        
         $result=$clonedObj->create($user);
         if ($result < 0) $error++;
         else
@@ -2803,20 +2805,33 @@ class Propal extends CommonObject
      */
     function getNomUrl($withpicto=0,$option='', $get_params='')
     {
-        global $langs, $conf;
+        global $langs, $conf, $user;
 
         $result='';
-        $label = '<u>' . $langs->trans("ShowPropal") . '</u>';
-        if (! empty($this->ref))
-            $label.= '<br><b>'.$langs->trans('Ref').':</b> '.$this->ref;
-        if (! empty($this->ref_client))
-            $label.= '<br><b>'.$langs->trans('RefCustomer').':</b> '.$this->ref_client;
-        if (! empty($this->total_ht))
-            $label.= '<br><b>' . $langs->trans('AmountHT') . ':</b> ' . price($this->total_ht, 0, $langs, 0, -1, -1, $conf->currency);
-        if (! empty($this->total_tva))
-            $label.= '<br><b>' . $langs->trans('VAT') . ':</b> ' . price($this->total_tva, 0, $langs, 0, -1, -1, $conf->currency);
-        if (! empty($this->total_ttc))
-            $label.= '<br><b>' . $langs->trans('AmountTTC') . ':</b> ' . price($this->total_ttc, 0, $langs, 0, -1, -1, $conf->currency);
+        $label = '';
+
+	    if ($user->rights->propal->lire) {
+		    $label .= '<u>'.$langs->trans("ShowPropal").'</u>';
+		    if (!empty($this->ref)) {
+			    $label .= '<br><b>'.$langs->trans('Ref').':</b> '.$this->ref;
+		    }
+		    if (!empty($this->ref_client)) {
+			    $label .= '<br><b>'.$langs->trans('RefCustomer').':</b> '.$this->ref_client;
+		    }
+		    if (!empty($this->total_ht)) {
+			    $label .= '<br><b>'.$langs->trans('AmountHT').':</b> '.price($this->total_ht, 0, $langs, 0, -1, -1,
+					    $conf->currency);
+		    }
+		    if (!empty($this->total_tva)) {
+			    $label .= '<br><b>'.$langs->trans('VAT').':</b> '.price($this->total_tva, 0, $langs, 0, -1, -1,
+					    $conf->currency);
+		    }
+		    if (!empty($this->total_ttc)) {
+			    $label .= '<br><b>'.$langs->trans('AmountTTC').':</b> '.price($this->total_ttc, 0, $langs, 0, -1, -1,
+					    $conf->currency);
+		    }
+	    }
+
         $linkclose = '" title="'.dol_escape_htmltag($label, 1).'" class="classfortooltip">';
         if ($option == '') {
             $link = '<a href="'.DOL_URL_ROOT.'/comm/propal/card.php?id='.$this->id. $get_params .$linkclose;
@@ -3224,7 +3239,11 @@ class PropaleLigne  extends CommonObjectLine
         if (empty($this->fk_fournprice)) $this->fk_fournprice=0;
 		if (! is_numeric($this->qty)) $this->qty = 0;
         if (empty($this->pa_ht)) $this->pa_ht=0;
-
+        if (empty($this->multicurrency_subprice))  $this->multicurrency_subprice=0;
+        if (empty($this->multicurrency_total_ht))  $this->multicurrency_total_ht=0;
+        if (empty($this->multicurrency_total_tva)) $this->multicurrency_total_tva=0;
+        if (empty($this->multicurrency_total_ttc)) $this->multicurrency_total_ttc=0;
+        
        // if buy price not defined, define buyprice as configured in margin admin
 		if ($this->pa_ht == 0 && $pa_ht_isemptystring) 
 		{

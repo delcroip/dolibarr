@@ -1117,11 +1117,15 @@ if ($action == 'create')
 	print '<td>';
 	$object = new ExpenseReport($db);
 	$include_users = $object->fetch_users_approver_expensereport();
-	$defaultselectuser=$user->fk_user;	// Will work only if supervisor has permission to approve so is inside include_users
-	if (! empty($conf->global->EXPENSEREPORT_DEFAULT_VALIDATOR)) $defaultselectuser=$conf->global->EXPENSEREPORT_DEFAULT_VALIDATOR;
-	if (GETPOST('fk_user_validator') > 0) $defaultselectuser=GETPOST('fk_user_validator');
-	$s=$form->select_dolusers($defaultselectuser, "fk_user_validator", 1, "", 0, $include_users);
-	print $form->textwithpicto($s, $langs->trans("AnyOtherInThisListCanValidate"));
+	if (empty($include_users)) print img_warning().' '.$langs->trans("NobodyHasPermissionToValidateExpenseReport");
+	else
+	{
+    	$defaultselectuser=$user->fk_user;	// Will work only if supervisor has permission to approve so is inside include_users
+    	if (! empty($conf->global->EXPENSEREPORT_DEFAULT_VALIDATOR)) $defaultselectuser=$conf->global->EXPENSEREPORT_DEFAULT_VALIDATOR;   // Can force default approver
+    	if (GETPOST('fk_user_validator') > 0) $defaultselectuser=GETPOST('fk_user_validator');
+    	$s=$form->select_dolusers($defaultselectuser, "fk_user_validator", 1, "", 0, $include_users);
+    	print $form->textwithpicto($s, $langs->trans("AnyOtherInThisListCanValidate"));
+	}
 	print '</td>';
 	print '</tr>';
 	if (! empty($conf->global->EXPENSEREPORT_ASK_PAYMENTMODE_ON_CREATION))
@@ -1511,17 +1515,17 @@ else
 				// Validation date
 				print '<tr>';
 				print '<td>'.$langs->trans("DATE_SAVE").'</td>';
-				print '<td>'.dol_print_date($object->date_create,'dayhour');
+				print '<td>'.dol_print_date($object->date_valid,'dayhour');
 				if ($object->status == 2 && $object->hasDelay('toapprove')) print ' '.img_warning($langs->trans("Late"));
 				if ($object->status == 5 && $object->hasDelay('topay')) print ' '.img_warning($langs->trans("Late"));
 				print '</td></tr>';
 				print '</tr>';
 
-				// User to inform
+				// User to inform for approval
 				if ($object->fk_statut < 3)	// informed
 				{
 					print '<tr>';
-					print '<td>'.$langs->trans("VALIDATOR").'</td>';
+					print '<td>'.$langs->trans("VALIDATOR").'</td>';   // approver
 					print '<td>';
 					if ($object->fk_user_validator > 0)
 					{
@@ -1999,7 +2003,8 @@ if ($action != 'create' && $action != 'edit')
 	// If bank module is not used	
 	if (($user->rights->expensereport->to_paid || empty($conf->banque->enabled)) && $object->fk_statut == 5)
 	{
-		if ((round($remaintopay) == 0 || empty($conf->banque->enabled)) && $object->paid == 0)
+		//if ((round($remaintopay) == 0 || empty($conf->banque->enabled)) && $object->paid == 0)
+		if ($object->paid == 0)
 		{
 			print '<div class="inline-block divButAction"><a class="butAction" href="' . $_SERVER["PHP_SELF"] . '?id='.$object->id.'&action=set_paid">'.$langs->trans("ClassifyPaid")."</a></div>";
 		}

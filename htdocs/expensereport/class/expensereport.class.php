@@ -907,7 +907,6 @@ class ExpenseReport extends CommonObject
                 }
             }
         }
-
         if ($this->fk_statut != 2)
         {
         	$now = dol_now();
@@ -918,7 +917,7 @@ class ExpenseReport extends CommonObject
                 $sql.= ", ref_number_int = ".$ref_number_int;
             }
             $sql.= ' WHERE rowid = '.$this->id;
-
+            
             $resql=$this->db->query($sql);
             if ($resql)
             {
@@ -1411,7 +1410,8 @@ class ExpenseReport extends CommonObject
 
 
     /**
-     * Return list of people with permission to validate trips and expenses
+     * Return list of people with permission to validate expense reports.
+     * Search for permission "approve expense report"
      *
      * @return  array       Array of user ids
      */
@@ -1419,10 +1419,15 @@ class ExpenseReport extends CommonObject
     {
         $users_validator=array();
 
-        $sql = "SELECT fk_user";
+        $sql = "SELECT DISTINCT ur.fk_user";
         $sql.= " FROM ".MAIN_DB_PREFIX."user_rights as ur, ".MAIN_DB_PREFIX."rights_def as rd";
-        $sql.= " WHERE ur.fk_id = rd.id and module = 'expensereport' AND perms = 'approve'";                    // Permission 'Approve';
-
+        $sql.= " WHERE ur.fk_id = rd.id and rd.module = 'expensereport' AND rd.perms = 'approve'";                                              // Permission 'Approve';
+        $sql.= "UNION";
+        $sql.= " SELECT DISTINCT ugu.fk_user";
+        $sql.= " FROM ".MAIN_DB_PREFIX."usergroup_user as ugu, ".MAIN_DB_PREFIX."usergroup_rights as ur, ".MAIN_DB_PREFIX."rights_def as rd";
+        $sql.= " WHERE ugu.fk_usergroup = ur.fk_usergroup AND ur.fk_id = rd.id and rd.module = 'expensereport' AND rd.perms = 'approve'";       // Permission 'Approve';
+        //print $sql;
+        
         dol_syslog(get_class($this)."::fetch_users_approver_expensereport sql=".$sql);
         $result = $this->db->query($sql);
         if($result)
@@ -1592,13 +1597,13 @@ class ExpenseReport extends CommonObject
                 
 	            if ($option == 'toapprove')
 	            {
-	                if ($this->db->jdate($obj->datevalid) < ($now - $conf->expensereport->approve->warning_delay)) {
+	                if ($this->db->jdate($obj->date_valid) < ($now - $conf->expensereport->approve->warning_delay)) {
 	                    $response->nbtodolate++;
 	                }
 	            }
 	            else
 	            {
-                    if ($this->db->jdate($obj->datevalid) < ($now - $conf->expensereport->payment->warning_delay)) {
+                    if ($this->db->jdate($obj->date_valid) < ($now - $conf->expensereport->payment->warning_delay)) {
     	                $response->nbtodolate++;
                     }
 	            }
@@ -1629,11 +1634,12 @@ class ExpenseReport extends CommonObject
         if ($option == 'topay' && $this->status != 5) return false;
     
         $now = dol_now();
-    
         if ($option == 'toapprove')
-            return $this->datevalid < ($now - $conf->expensereport->approve->warning_delay);
+        {
+            return ($this->datevalid?$this->datevalid:$this->date_valid) < ($now - $conf->expensereport->approve->warning_delay);
+        }
         else
-            return $this->datevalid < ($now - $conf->expensereport->payment->warning_delay);
+            return ($this->datevalid?$this->datevalid:$this->date_valid) < ($now - $conf->expensereport->payment->warning_delay);
     }    
 }
 

@@ -12,6 +12,112 @@ Upgrading to any other version or any other database system is abolutely require
 make a Dolibarr upgrade.
 
 
+***** ChangeLog for 4.0.3 to 4.0.2 *****
+FIX: #5853 $conf->global->$calc==0 || $conf->global->$calc==1
+FIX: #5958 no discount on supplier command made by replenishment
+FIX: #5966 Bug: getNomUrl tooltips show Proposal info even if user has no rights to read them
+FIX: #5972 #5734
+FIX: #6007
+FIX: #6010
+FIX: #6029
+FIX: #6043 - Payment mode not visible on supplier invoice list
+FIX: #6051
+FIX: #6062
+FIX: #6088
+FIX: A draft can be deleted by a user with create permission.
+FIX: bad permission to see contract on home page
+FIX: bad permission to see contract statistics
+FIX: Bcc must not appears to recipient when using SMTPs lib
+FIX: Consistent description for add or edit product
+FIX: delete contract extrafields on contract deletion
+FIX: Deposits and credit notes weren't added in the received and pending columns
+FIX: export extrafields must not include separe type
+FIX: Export of opportunity status must be code, not id.
+FIX: False positive on services not activated
+FIX: Filter was wrong or lost during navigation
+FIX: HT and TTC price should always be displayed together
+FIX: if a supplier price reference is changed after creating an order, we can't clone order.
+FIX: in export. Error when using a separate extrafields.
+FIX: Introduce hidden option MAIL_PREFIX_FOR_EMAIL_ID to solve pb of tracking email.
+FIX: javascript error when using on mobile/smartphone
+FIX: javascript xss injection and a translation
+FIX: Label of project is in field title not label.
+FIX: List of people able to validate an expense report was not complete.
+FIX: Missing field
+FIX: Module gravatar was not triggered on thirdparty and contact card
+FIX: Must use external link into a forged email content.
+FIX: Pb in management of date end of projects
+FIX: Regression when deleting product
+FIX: rendering of output of estimated amount on project overview page.
+FIX: Sanitize title of ajax_dialog
+FIX: Security to restrict email sending was not efficient
+FIX: Setting supplier as client when accept a supplier proposal
+FIX: Some statistics not compatible with multicompany module.
+FIX: the time spent on project was not visible in its overwiew
+FIX: Update intervention lline crash with PgSQL
+FIX: wrong test on dict.php
+FIX: wrong var name
+
+***** ChangeLog for 4.0.2 compared to 4.0.1 *****
+FIX: #5340
+FIX: #5779
+FIX: #5849
+FIX: #5866
+FIX: #5907
+FIX: Addline if $txlocaltax1 is empty
+FIX: Avoid error 500 if phpexcel is disabled
+FIX: Avoid errors on debian
+FIX: Can edit the customer ref even if order is not draft.
+FIX: Documents not moved in new directory if we change reference of the task.
+FIX: Error when CATEGORIE_RECURSIV_ADD is enabled and new category is child of an already linked to object
+FIX: Extra fields of task not copied on project cloning
+FIX: Hidden option PRODUCT_MAX_VISIBLE_PHOTO
+FIX: Link on supplier invoice in widget was not clickable
+FIX: margin tab on customer card must filter on current entity invoices
+FIX: missing column into SQL on thirdparty list
+FIX: Nber of attached files were not reported in event report of email sent
+FIX: only show projects of related third if external user
+FIX: Search provider by price
+FIX: Solve backup when using mysqldump that return warning
+FIX: Sql error in widget of product for stock alerts
+FIX: updateligne if $txlocaltax1 is null
+
+***** ChangeLog for 4.0.1 compared to 4.0.0 *****
+FIX: #2853
+FIX: #2991
+FIX: #3128
+FIX: #5699
+FIX: #5734
+FIX: #5742 error on project list if an extra field separator is added.
+FIX: #5746 chrome php Try a fix. Not sure it solved all problems reported
+FIX: #5748 Bug: Error updating to 4.0.1 with Postgresql. Field must be varchar.
+FIX: #5750 Bug: CmailFile::server_parse enters an infinite loop if $server_response is false
+FIX: #5752 Bug VAT NPR not propagated during proposal cloning
+FIX: #5763 Bug: Cannot Create Supplier Price Request
+FIX: #5770 Dolibarr doesn't modify correctly the hour of a task
+FIX: #5776
+FIX: #5802 Incoterms not set
+FIX: #5813 Bug: Incoterms not being read correctly
+FIX: #5818
+FIX: alignement of intervention status
+FIX: Clean of search fields
+FIX: Creation of donation should go back on card after creation
+FIX: Date visible on project overview
+FIX: Execute a dedicated job from its id may results of launching other jobs too.
+FIX: Failed to export contact categories with contact extra fields
+FIX: inversion customer/supplier price
+FIX: link "back to list" was not visible.
+FIX: Lost filter on opportunities
+FIX: Mandatory field payment term was not css highlighted.
+FIX: Menu users not visible on dolidroid.
+FIX: SEC for HTB23302
+FIX: The email test sender in email setup was broken
+FIX: Translation of "Name" is not a good choice for floow-up.
+FIX: Update of maxnbrun on job list failed.
+FIX: Value of payment term and project are not set on correct default value when invoice generated from template.
+FIX: vat dictionary should allow enter and edit multiple values for localtaxes, separated by: (ex -19:-15)
+FIX: Vat not visible in dictionnary
+
 ***** ChangeLog for 4.0.0 compared to 3.9.* *****
 For users:
 
@@ -55,7 +161,7 @@ NEW: Add hidden option to hide column qty ordered on shipments.
 NEW: Add view of virtual stock into product list (when appropriate)
 NEW: Add warning on tasks when they are late (add also the warning tolerance parameter)
 NEW: Add weight/volume for one product into shipment export
-NEW: Add width and height on product card
+NEW: Add width and height on product table
 NEW: allow a document to be linked to project from another customer on config
 NEW: allow project to be shared across entities (for multicompany module)
 NEW: All variant of ckeditor config can be tested into the setup page of module.

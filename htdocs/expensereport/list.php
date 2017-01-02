@@ -133,7 +133,7 @@ $sql.= " d.date_debut, d.date_fin, d.date_valid,";
 $sql.= " u.rowid as id_user, u.firstname, u.lastname";
 $sql.= " FROM ".MAIN_DB_PREFIX."expensereport as d";
 $sql.= " INNER JOIN ".MAIN_DB_PREFIX."user as u ON d.fk_user_author = u.rowid";
-$sql.= " WHERE d.entity = ".$conf->entity;
+$sql.= ' WHERE d.entity IN ('.getEntity('expensereport', 1).')';
 // Search all
 if (!empty($sall))
 {
@@ -141,7 +141,7 @@ if (!empty($sall))
 }
 // Ref
 if(!empty($search_ref)){
-	$sql.= " AND d.ref LIKE '%".$db->escape($search_ref)."%'";
+	$sql.= natural_search("d.ref", $search_ref);
 }
 // Date Start
 if ($month_start > 0)
@@ -325,9 +325,9 @@ if ($resql)
 			$expensereportstatic->id=$objp->rowid;
 			$expensereportstatic->ref=$objp->ref;
 			$expensereportstatic->status=$objp->status;
-			$expensereportstatic->valid=$objp->date_valid;
-			$expensereportstatic->date_debut=$objp->date_debut;
-			$expensereportstatic->date_fin=$objp->date_fin;
+			$expensereportstatic->date_valid=$db->jdate($objp->date_valid);
+			$expensereportstatic->date_debut=$db->jdate($objp->date_debut);
+			$expensereportstatic->date_fin=$db->jdate($objp->date_fin);
 
 			$var=!$var;
 			print "<tr ".$bc[$var].">";

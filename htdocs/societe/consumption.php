@@ -114,7 +114,9 @@ if (empty($socid))
 $head = societe_prepare_head($object);
 dol_fiche_head($head, 'consumption', $langs->trans("ThirdParty"),0,'company');
 
-dol_banner_tab($object, 'socid', '', ($user->societe_id?0:1), 'rowid', 'nom');
+$linkback = '<a href="'.DOL_URL_ROOT.'/societe/list.php">'.$langs->trans("BackToList").'</a>';
+
+dol_banner_tab($object, 'socid', $linkback, ($user->societe_id?0:1), 'rowid', 'nom');
 
 print '<div class="fichecenter">';
 
@@ -247,6 +249,7 @@ if ($type_element == 'supplier_invoice')
 	$tables_from = MAIN_DB_PREFIX."facture_fourn as f,".MAIN_DB_PREFIX."facture_fourn_det as d";
 	$where = " WHERE f.fk_soc = s.rowid AND s.rowid = ".$socid;
 	$where.= " AND d.fk_facture_fourn = f.rowid";
+	$where.= " AND f.entity = ".$conf->entity;
 	$dateprint = 'f.datef';
 	$doc_number='f.ref';
 	$thirdTypeSelect='supplier';
@@ -259,6 +262,7 @@ if ($type_element == 'supplier_order')
 	$tables_from = MAIN_DB_PREFIX."commande_fournisseur as c,".MAIN_DB_PREFIX."commande_fournisseurdet as d";
 	$where = " WHERE c.fk_soc = s.rowid AND s.rowid = ".$socid;
 	$where.= " AND d.fk_commande = c.rowid";
+	$where.= " AND c.entity = ".$conf->entity;
 	$dateprint = 'c.date_valid';
 	$doc_number='c.ref';
 	$thirdTypeSelect='supplier';
@@ -272,6 +276,7 @@ if ($type_element == 'contract')
 	$tables_from = MAIN_DB_PREFIX."contrat as c,".MAIN_DB_PREFIX."contratdet as d";
 	$where = " WHERE c.fk_soc = s.rowid AND s.rowid = ".$socid;
 	$where.= " AND d.fk_contrat = c.rowid";
+	$where.= " AND c.entity = ".$conf->entity;
 	$dateprint = 'c.date_valid';
 	$doc_number='c.ref';
 	$thirdTypeSelect='customer';

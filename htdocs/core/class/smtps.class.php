@@ -484,14 +484,20 @@ class SMTPs
 				// and send it out "single file"
 				foreach ( $this->get_RCPT_list() as $_address )
 				{
-					/*
+				    /* Note:
+				     * BCC email addresses must be listed in the RCPT TO command list,
+                     * but the BCC header should not be printed under the DATA command.
+				     * http://stackoverflow.com/questions/2750211/sending-bcc-emails-using-a-smtp-server
+				     */
+
+    				/*
 					 * TODO
-					* After each 'RCPT TO:' is sent, we need to make sure it was kosher,
-					* if not, the whole message will fail
-					* If any email address fails, we will need to RESET the connection,
-					* mark the last address as "bad" and start the address loop over again.
-					* If any address fails, the entire message fails.
-					*/
+					 * After each 'RCPT TO:' is sent, we need to make sure it was kosher,
+					 * if not, the whole message will fail
+					 * If any email address fails, we will need to RESET the connection,
+					 * mark the last address as "bad" and start the address loop over again.
+					 * If any address fails, the entire message fails.
+					 */
 					$this->socket_send_str('RCPT TO: <' . $_address . '>', '250');
 				}
 
@@ -1020,7 +1026,7 @@ class SMTPs
 	/**
 	 * Returns an array of addresses for a specific type; TO, CC or BCC
 	 *
-	 * @param 		string 	$_which 	Which collection of adresses to return
+	 * @param 		string 	       $_which 	    Which collection of addresses to return ('to', 'cc', 'bcc')
 	 * @return 		string|false 				Array of emaill address
 	 */
 	function get_email_list($_which = null)
@@ -1169,13 +1175,23 @@ class SMTPs
 		if ( $this->getCC() )
 		$_header .= 'Cc: ' . $this->getCC()  . "\r\n";
 
+		/* Note:
+		 * BCC email addresses must be listed in the RCPT TO command list,
+		 * but the BCC header should not be printed under the DATA command.
+		 * So it is included into the function sendMsg() but not here.
+		 * http://stackoverflow.com/questions/2750211/sending-bcc-emails-using-a-smtp-server
+		 */
+		/*
 		if ( $this->getBCC() )
 		$_header .= 'Bcc: ' . $this->getBCC()  . "\r\n";
-
+        */
+		
 		$host=$this->getHost();
 		$host=preg_replace('@tcp://@i','',$host);	// Remove prefix
 		$host=preg_replace('@ssl://@i','',$host);	// Remove prefix
 
+		$host=dol_getprefix('email').'-'.$host;
+		
 		//NOTE: Message-ID should probably contain the username of the user who sent the msg
 		$_header .= 'Subject: '    . $this->getSubject()     . "\r\n";
 		$_header .= 'Date: '       . date("r")               . "\r\n";
@@ -1237,7 +1253,9 @@ class SMTPs
 		// Make RFC821 Compliant, replace bare linefeeds
 		$strContent = preg_replace("/(?<!\r)\n/si", "\r\n", $strContent);
 
-		$strContent = rtrim(wordwrap($strContent, 75, "\r\n"));
+		// Make RFC2045 Compliant
+		//$strContent = rtrim(chunk_split($strContent));    // Function chunck_split seems ko if not used on a base64 content
+		$strContent = rtrim(wordwrap($strContent, 75, "\r\n"));   // TODO Using this method creates unexpected line break on text/plain content.
 
 		$this->_msgContent[$strType] = array();
 

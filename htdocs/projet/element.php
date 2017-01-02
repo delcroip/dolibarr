@@ -348,7 +348,7 @@ $listofreferent=array(
 	'table'=>'projet_task',
 	'datefieldname'=>'task_date',
 	'disableamount'=>0,
-	'test'=>$conf->projet->enabled && $user->rights->projet->lire && $conf->salaries->enabled && empty($conf->global->PROJECT_HIDE_TASKS)),
+	'test'=>$conf->projet->enabled && $user->rights->projet->lire && empty($conf->global->PROJECT_HIDE_TASKS)),
 );
 
 if ($action=="addelement")
@@ -618,15 +618,16 @@ foreach ($listofreferent as $key => $value)
 
 		print load_fiche_titre($langs->trans($title), $addform, '');
 
+		print "\n".'<!-- Table for tablename = '.$tablename.' -->'."\n";
 		print '<table class="noborder" width="100%">';
 
 		print '<tr class="liste_titre">';
 		// Remove link
 		print '<td style="width: 24px"></td>';
 		// Ref
-		print '<td style="width: 200px">'.$langs->trans("Ref").'</td>';
+		print '<td'.(($tablename != 'actioncomm' && $tablename != 'projet_task') ? ' style="width: 200px"':'').'>'.$langs->trans("Ref").'</td>';
 		// Date
-		print '<td width="100" align="center">';
+		print '<td'.(($tablename != 'actioncomm' && $tablename != 'projet_task') ? ' style="width: 200px"':'').' align="center">';
 		if (! in_array($tablename, array('projet_task'))) print $langs->trans("Date");
 		print '</td>';
 		// Thirdparty or user
@@ -750,21 +751,43 @@ foreach ($listofreferent as $key => $value)
 					}
 
 					print $formfile->getDocumentsLink($element_doc, $filename, $filedir);
+					
+					// Show supplier ref
+					if (! empty($element->ref_supplier)) print ' - '.$element->ref_supplier;
+					// Show customer ref
+					if (! empty($element->ref_customer)) print ' - '.$element->ref_customer;
 				}
 
 				print "</td>\n";
 
 				// Date
-				if ($tablename == 'commande_fournisseur' || $tablename == 'supplier_order') $date=$element->date_commande;
-				elseif ($tablename == 'projet_task') $date='';	// We show no date. Showing date of beginning of task make user think it is date of time consumed
-				else
+				$date='';
+				if ($tablename == 'expensereport_det') $date = $element->date;      // No draft status on lines
+				elseif (! empty($element->status) || ! empty($element->statut) || ! empty($element->fk_status))
 				{
-					$date=$element->date;
-					if (empty($date)) $date=$element->datep;
-					if (empty($date)) $date=$element->date_contrat;
-					if (empty($date)) $date=$element->datev; //Fiche inter
+				    if ($tablename=='don') $date = $element->datedon;
+				    if ($tablename == 'commande_fournisseur' || $tablename == 'supplier_order') 
+    				{
+    				    $date=($element->date_commande?$element->date_commande:$element->date_valid);
+    				}
+    				elseif ($tablename == 'supplier_proposal') $date=$element->date_validation; // There is no other date for this
+    				elseif ($tablename == 'fichinter') $date=$element->datev; // There is no other date for this
+    				elseif ($tablename == 'projet_task') $date='';	// We show no date. Showing date of beginning of task make user think it is date of time consumed
+    				else
+    				{
+    					$date=$element->date;                              // invoice, ...
+    					if (empty($date)) $date=$element->date_contrat;
+    					if (empty($date)) $date=$element->datev;
+    				}
 				}
-				print '<td align="center">'.dol_print_date($date,'day').'</td>';
+				print '<td align="center">';
+				if ($tablename == 'actioncomm')
+				{
+				    print dol_print_date($element->datep,'dayhour');
+				    if ($element->datef && $element->datef > $element->datep) print " - ".dol_print_date($element->datef,'dayhour');
+				}
+				else print dol_print_date($date,'day');
+				print '</td>';
 
 				// Third party or user
                 print '<td align="left">';
@@ -794,25 +817,39 @@ foreach ($listofreferent as $key => $value)
 				$warning='';
 				if (empty($value['disableamount']))
 				{
+				    $total_ht_by_line=null;
+				    $othermessage='';
 					if ($tablename == 'don') $total_ht_by_line=$element->amount;
 					elseif ($tablename == 'projet_task')
 					{
-						$tmp = $element->getSumOfAmount($elementuser, $dates, $datee);	// $element is a task. $elementuser may be empty
-						$total_ht_by_line = price2num($tmp['amount'],'MT');
-						if ($tmp['nblinesnull'] > 0)
-						{
-							$langs->load("errors");
-							$warning=$langs->trans("WarningSomeLinesWithNullHourlyRate", $conf->currency);
-						}
+					    if (! empty($conf->salaries->enabled))
+					    {
+					        // TODO Permission to read daily rate
+    					    $tmp = $element->getSumOfAmount($elementuser, $dates, $datee);	// $element is a task. $elementuser may be empty
+    						$total_ht_by_line = price2num($tmp['amount'],'MT');
+    						if ($tmp['nblinesnull'] > 0)
+    						{
+    							$langs->load("errors");
+    							$warning=$langs->trans("WarningSomeLinesWithNullHourlyRate", $conf->currency);
+    						}
+					    }
+					    else
+					    {
+					        $othermessage=$form->textwithpicto($langs->trans("NotAvailable"), $langs->trans("ModuleSalaryToDefineHourlyRateMustBeEnabled"));
+					    }
 					}
 					else
 					{
 						$total_ht_by_line=$element->total_ht;
 					}
 					print '<td align="right">';
-					if (! $qualifiedfortotal) print '<strike>';
-					print (isset($total_ht_by_line)?price($total_ht_by_line):'&nbsp;');
-					if (! $qualifiedfortotal) print '</strike>';
+					if ($othermessage) print $othermessage;
+					if (isset($total_ht_by_line))
+					{
+					   if (! $qualifiedfortotal) print '<strike>';
+					   print price($total_ht_by_line);
+					   if (! $qualifiedfortotal) print '</strike>';
+					}
 					if ($warning) print ' '.img_warning($warning);
 					print '</td>';
 				}
@@ -821,20 +858,33 @@ foreach ($listofreferent as $key => $value)
                 // Amount inc tax
 				if (empty($value['disableamount']))
 				{
+				    $total_ttc_by_line=null;
 					if ($tablename == 'don') $total_ttc_by_line=$element->amount;
 					elseif ($tablename == 'projet_task')
 					{
-						$defaultvat = get_default_tva($mysoc, $mysoc);
-						$total_ttc_by_line = price2num($total_ht_by_line * (1 + ($defaultvat / 100)),'MT');
+					    if (! empty($conf->salaries->enabled))
+					    {
+					        // TODO Permission to read daily rate
+    						$defaultvat = get_default_tva($mysoc, $mysoc);
+    						$total_ttc_by_line = price2num($total_ht_by_line * (1 + ($defaultvat / 100)),'MT');
+					    }
+					    else
+					    {
+					        $othermessage=$form->textwithpicto($langs->trans("NotAvailable"), $langs->trans("ModuleSalaryToDefineHourlyRateMustBeEnabled"));
+					    }					    
 					}
 					else
 					{
 						$total_ttc_by_line=$element->total_ttc;
 					}
 					print '<td align="right">';
-					if (! $qualifiedfortotal) print '<strike>';
-					print (isset($total_ttc_by_line)?price($total_ttc_by_line):'&nbsp;');
-					if (! $qualifiedfortotal) print '</strike>';
+					if ($othermessage) print $othermessage;
+					if (isset($total_ttc_by_line))
+					{
+					   if (! $qualifiedfortotal) print '<strike>';
+					   print price($total_ttc_by_line);
+					   if (! $qualifiedfortotal) print '</strike>';
+					}
 					if ($warning) print ' '.img_warning($warning);
 					print '</td>';
 				}
@@ -897,15 +947,25 @@ foreach ($listofreferent as $key => $value)
 
 			if ($breakline) print $breakline;
 
+			// Total
 			print '<tr class="liste_total"><td colspan="4">'.$langs->trans("Number").': '.$i.'</td>';
 			//if (empty($value['disableamount']) && ! in_array($tablename, array('projet_task'))) print '<td align="right" width="100">'.$langs->trans("TotalHT").' : '.price($total_ht).'</td>';
 			//elseif (empty($value['disableamount']) && in_array($tablename, array('projet_task'))) print '<td align="right" width="100">'.$langs->trans("Total").' : '.price($total_ht).'</td>';
-			if (empty($value['disableamount'])) print '<td align="right" width="100">'.$langs->trans("TotalHT").' : '.price($total_ht).'</td>';
-			else print '<td></td>';
+			print '<td align="right">';
+			if (empty($value['disableamount'])) 
+			{
+			    if (! empty($conf->salaries->enabled)) print ''.$langs->trans("TotalHT").' : '.price($total_ht);
+			}
+			print '</td>';
 			//if (empty($value['disableamount']) && ! in_array($tablename, array('projet_task'))) print '<td align="right" width="100">'.$langs->trans("TotalTTC").' : '.price($total_ttc).'</td>';
 			//elseif (empty($value['disableamount']) && in_array($tablename, array('projet_task'))) print '<td align="right" width="100"></td>';
-			if (empty($value['disableamount'])) print '<td align="right" width="100">'.$langs->trans("TotalTTC").' : '.price($total_ttc).'</td>';
-			else print '<td></td>';
+			print '<td align="right">';
+			if (empty($value['disableamount'])) 
+			{
+			    
+			    if (! empty($conf->salaries->enabled)) print $langs->trans("TotalTTC").' : '.price($total_ttc);
+			}
+			print '</td>';
 			print '<td>&nbsp;</td>';
 			print '</tr>';
 		}

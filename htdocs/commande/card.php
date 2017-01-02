@@ -1595,7 +1595,14 @@ if ($action == 'create' && $user->rights->commande->creer)
 		print '<tr>';
 		print '<td><label for="incoterm_id">'.$form->textwithpicto($langs->trans("IncotermLabel"), $objectsrc->libelle_incoterms, 1).'</label></td>';
         print '<td colspan="3" class="maxwidthonsmartphone">';
-        print $form->select_incoterms((!empty($objectsrc->fk_incoterms) ? $objectsrc->fk_incoterms : ''), (!empty($objectsrc->location_incoterms)?$objectsrc->location_incoterms:''));
+        $incoterm_id = GETPOST('incoterm_id');
+        $incoterm_location = GETPOST('location_incoterms');
+        if (empty($incoterm_id))
+        {
+            $incoterm_id = (!empty($objectsrc->fk_incoterms) ? $objectsrc->fk_incoterms : $soc->fk_incoterms);
+            $incoterm_location = (!empty($objectsrc->location_incoterms) ? $objectsrc->location_incoterms : $soc->location_incoterms);
+        }
+        print $form->select_incoterms($incoterm_id, $incoterm_location);
 		print '</td></tr>';
 	}
 
@@ -1974,7 +1981,7 @@ if ($action == 'create' && $user->rights->commande->creer)
 		print '<table class="nobordernopadding" width="100%"><tr><td class="nowrap">';
 		print $langs->trans('RefCustomer') . '</td><td align="left">';
 		print '</td>';
-		if ($action != 'refcustomer' && $object->brouillon)
+		if ($action != 'refcustomer')
 			print '<td align="right"><a href="' . $_SERVER['PHP_SELF'] . '?action=refcustomer&amp;id=' . $object->id . '">' . img_edit($langs->trans('Modify')) . '</a></td>';
 		print '</tr></table>';
 		print '</td><td colspan="3">';

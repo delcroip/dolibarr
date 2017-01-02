@@ -7,7 +7,7 @@
  * Copyright (C) 2004      Christophe Combelles <ccomb@free.fr>
  * Copyright (C) 2005-2012 Regis Houssin        <regis.houssin@capnetworks.com>
  * Copyright (C) 2008      Raphael Bertrand (Resultic)       <raphael.bertrand@resultic.fr>
- * Copyright (C) 2010-2014 Juanjo Menent        <jmenent@2byte.es>
+ * Copyright (C) 2010-2016 Juanjo Menent        <jmenent@2byte.es>
  * Copyright (C) 2013      Cédric Salvador      <csalvador@gpcsolutions.fr>
  * Copyright (C) 2013      Alexandre Spangaro   <aspangaro.dolibarr@gmail.com>
  * Copyright (C) 2014      Cédric GROSS         <c.gross@kreiz-it.fr>
@@ -287,10 +287,20 @@ function GETPOST($paramname,$check='',$method=0,$filter=NULL,$options=NULL)
  *  This prefix is unique for instance and avoid conflict between multi-instances,
  *  even when having two instances with one root dir or two instances in virtual servers
  *
+ *  @param  string  $mode       '' or 'email'              
  *  @return	string      		A calculated prefix
  */
-function dol_getprefix()
+function dol_getprefix($mode='')
 {
+    global $conf;
+    
+    // If MAIL_PREFIX_FOR_EMAIL_ID is set and prefix is for email
+    if ($mode == 'email' && ! empty($conf->global->MAIL_PREFIX_FOR_EMAIL_ID))
+    {
+        if ($conf->global->MAIL_PREFIX_FOR_EMAIL_ID != 'SERVER_NAME') return $conf->global->MAIL_PREFIX_FOR_EMAIL_ID;
+        else if (isset($_SERVER["SERVER_NAME"])) return $_SERVER["SERVER_NAME"];
+    }
+
 	if (isset($_SERVER["SERVER_NAME"]) && isset($_SERVER["DOCUMENT_ROOT"]))
 	{
 		return dol_hash($_SERVER["SERVER_NAME"].$_SERVER["DOCUMENT_ROOT"].DOL_DOCUMENT_ROOT.DOL_URL_ROOT);
@@ -368,7 +378,21 @@ function dol_buildpath($path, $type=0)
 		
 		foreach ($conf->file->dol_document_root as $key => $dirroot)	// ex: array(["main"]=>"/home/main/htdocs", ["alt0"]=>"/home/dirmod/htdocs", ...)
 		{
-			if ($key == 'main') continue;
+			if ($key == 'main') 
+			{
+			    if ($type == 3)
+			    {
+			        global $dolibarr_main_url_root;
+			        	
+			        // Define $urlwithroot
+			        $urlwithouturlroot=preg_replace('/'.preg_quote(DOL_URL_ROOT,'/').'$/i','',trim($dolibarr_main_url_root));
+			        $urlwithroot=$urlwithouturlroot.DOL_URL_ROOT;		// This is to use external domain name found into config file
+			        //$urlwithroot=DOL_MAIN_URL_ROOT;					// This is to use same domain name than current
+
+			        $res=(preg_match('/^http/i',$conf->file->dol_url_root[$key])?'':$urlwithroot).'/'.$path;     // Test on start with http is for old conf syntax
+			    }
+			    continue;
+			}
 			preg_match('/^([^\?]+(\.css\.php|\.css|\.js\.php|\.js|\.png|\.jpg|\.php)?)/i',$path,$regs);    // Take part before '?'
 			if (! empty($regs[1]))
 			{
@@ -392,7 +416,7 @@ function dol_buildpath($path, $type=0)
 					    $urlwithroot=$urlwithouturlroot.DOL_URL_ROOT;		// This is to use external domain name found into config file
 					    //$urlwithroot=DOL_MAIN_URL_ROOT;					// This is to use same domain name than current
 					    					
-					    $res=(preg_match('/^http/i',$conf->file->dol_url_root[$key])?'':$urlwithroot).$conf->file->dol_url_root[$key].'/'.$path;
+					    $res=(preg_match('/^http/i',$conf->file->dol_url_root[$key])?'':$urlwithroot).$conf->file->dol_url_root[$key].'/'.$path;     // Test on start with http is for old conf syntax
 					}
 					break;
 				}
@@ -929,7 +953,7 @@ function dol_banner_tab($object, $paramid, $morehtml='', $shownav=1, $fieldid='r
         $showimage=$object->is_photo_available($conf->product->multidir_output[$object->entity]);
 	    $maxvisiblephotos=(isset($conf->global->PRODUCT_MAX_VISIBLE_PHOTO)?$conf->global->PRODUCT_MAX_VISIBLE_PHOTO:5);
 		if ($conf->browser->phone) $maxvisiblephotos=1;
-		if ($showimage) $morehtmlleft.='<div class="floatleft inline-block valignmiddle divphotoref">'.$object->show_photos($conf->product->multidir_output[$object->entity],'small',-$maxvisiblephotos,0,0,0,$width,0).'</div>';
+		if ($showimage) $morehtmlleft.='<div class="floatleft inline-block valignmiddle divphotoref">'.$object->show_photos($conf->product->multidir_output[$object->entity],'small',$maxvisiblephotos,0,0,0,$width,0).'</div>';
         else 
         {
 			if (!empty($conf->global->PRODUCT_NODISPLAYIFNOPHOTO)) {
@@ -1113,7 +1137,7 @@ function dol_strftime($fmt, $ts=false, $is_gmt=false)
  *										"%d %b %Y",
  *										"%d/%m/%Y %H:%M",
  *										"%d/%m/%Y %H:%M:%S",
- *										"day", "daytext", "dayhour", "dayhourldap", "dayhourtext", "dayrfc", "dayhourrfc"
+ *										"day", "daytext", "dayhour", "dayhourldap", "dayhourtext", "dayrfc", "dayhourrfc", "...reduceformat"
  * 	@param	string		$tzoutput		true or 'gmt' => string is for Greenwich location
  * 										false or 'tzserver' => output string is for local PHP server TZ usage
  * 										'tzuser' => output string is for user TZ (current browser TZ with current dst)
@@ -2426,9 +2450,9 @@ function img_printer($titlealt = "default", $other='')
 /**
  *	Show help logo with cursor "?"
  *
- * 	@param	string	$usehelpcursor		Use help cursor
- * 	@param	string	$usealttitle		Text to use as alt title
- * 	@return string      				Retourne tag img
+ * 	@param	int              	$usehelpcursor		Use help cursor
+ * 	@param	int|string	        $usealttitle		Text to use as alt title
+ * 	@return string            	           			Return tag img
  */
 function img_help($usehelpcursor = 1, $usealttitle = 1)
 {
@@ -3508,7 +3532,7 @@ function showDimensionInBestUnit($dimension, $unit, $type, $outputlangs, $round=
  * 	@param	float		$vatrate		        Vat rate. Can be '8.5' or '8.5 (VATCODEX)' for example
  * 	@param  int			$local		         	Local tax to search and return (1 or 2 return only tax rate 1 or tax rate 2)
  *  @param  Societe		$thirdparty_buyer    	Object of buying third party
- *  @param	Societe		$thirdparty_seller		Object of selling third party
+ *  @param	Societe		$thirdparty_seller		Object of selling third party ($mysoc if not defined)
  *  @param	int			$vatnpr					If vat rate is NPR or not
  * 	@return	mixed			   					0 if not found, localtax rate if found
  *  @see get_default_tva
@@ -3524,7 +3548,7 @@ function get_localtax($vatrate, $local, $thirdparty_buyer="", $thirdparty_seller
 	$vatratecleaned = $vatrate;
 	if (preg_match('/^(.*)\s*\((.*)\)$/', $vatrate, $reg))      // If vat is "xx (yy)"
 	{
-        $vatratecleaned = $reg[1];
+        $vatratecleaned = trim($reg[1]);
 	    $vatratecode = $reg[2];
 	}
 	
@@ -3538,7 +3562,7 @@ function get_localtax($vatrate, $local, $thirdparty_buyer="", $thirdparty_seller
 	{
 		if ($local == 1)
 		{
-			if (! $mysoc->localtax1_assuj) return 0;
+			if (! $mysoc->localtax1_assuj || (string) $vatratecleaned == "0") return 0;
 			if ($thirdparty_seller->id == $mysoc->id)
 			{
 				if (! $thirdparty_buyer->localtax1_assuj) return 0;
@@ -3551,7 +3575,7 @@ function get_localtax($vatrate, $local, $thirdparty_buyer="", $thirdparty_seller
 
 		if ($local == 2)
 		{
-			if (! $mysoc->localtax2_assuj) return 0;
+			if (! $mysoc->localtax2_assuj || (string) $vatratecleaned == "0") return 0;
 			if ($thirdparty_seller->id == $mysoc->id)
 			{
 				if (! $thirdparty_buyer->localtax2_assuj) return 0;
@@ -3567,18 +3591,15 @@ function get_localtax($vatrate, $local, $thirdparty_buyer="", $thirdparty_seller
 		if ($local == 1 && ! $thirdparty_seller->localtax1_assuj) return 0;
 		if ($local == 2 && ! $thirdparty_seller->localtax2_assuj) return 0;
 	}
-	//if ($local == 0 && ! $thirdparty_seller->localtax1_assuj && ! $thirdparty_seller->localtax2_assuj) return array('localtax1'=>0,'localtax2'=>0);
 
-	// Do not enabled this. We want localtax that match the vat rate.
-	// If we forced a vat, we must also force local tax
-	/*
-	if (is_object($thirdparty_buyer))
+	// For some country MAIN_GET_LOCALTAXES_VALUES_FROM_THIRDPARTY is forced to on.
+	if (in_array($mysoc->country_code, array('ES')))
 	{
-		if ($thirdparty_seller->country_code != $thirdparty_buyer->country_code) return 0;
-	}*/
-
+	    $conf->global->MAIN_GET_LOCALTAXES_VALUES_FROM_THIRDPARTY = 1;
+	}
+	    
 	// Search local taxes
-	if ($mysoc->country_code == 'ES' || ! empty($conf->global->MAIN_GET_LOCALTAXES_VALUES_FROM_THIRDPARTY))
+	if (! empty($conf->global->MAIN_GET_LOCALTAXES_VALUES_FROM_THIRDPARTY))
 	{
     	if ($local==1)
     	{
@@ -3823,7 +3844,7 @@ function getLocalTaxesFromRate($vatrate, $local, $buyer, $seller, $firstparamisi
  *  @param	int			$idprod          	Id of product or 0 if not a predefined product
  *  @param  Societe		$thirdparty_seller  Thirdparty with a ->country_code defined (FR, US, IT, ...)
  *	@param	int			$idprodfournprice	Id product_fournisseur_price (for "supplier" order/invoice)
- *  @return int					         	<0 if KO, Vat rate if OK
+ *  @return float					        Vat rate
  *  @see get_product_localtax_for_country
  */
 function get_product_vat_for_country($idprod, $thirdparty_seller, $idprodfournprice=0)
@@ -3973,7 +3994,7 @@ function get_product_localtax_for_country($idprod, $local, $thirdparty_seller)
  *	@param  Societe		$thirdparty_buyer   	Objet societe acheteuse
  *	@param  int			$idprod					Id product
  *	@param	int			$idprodfournprice		Id product_fournisseur_price (for supplier order/invoice)
- *	@return float         				      	Taux de tva a appliquer, -1 si ne peut etre determine
+ *	@return float         				      	Vat rate to use, -1 if we can't guess it
  *  @see get_default_npr, get_default_localtax
  */
 function get_default_tva(Societe $thirdparty_seller, Societe $thirdparty_buyer, $idprod=0, $idprodfournprice=0)
@@ -4522,7 +4543,7 @@ function dol_nboflines_bis($text,$maxlinesize=0,$charset='UTF-8')
 	else $pattern = '/(<br[^>]*>)/U';							// /U is to have UNGREEDY regex to limit to one html tag.
 	$a = preg_split($pattern, $text, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
 
-	$nblines = floor((count($a)+1)/2);
+	$nblines = (int) floor((count($a)+1)/2);
 	// count possible auto line breaks
 	if($maxlinesize)
 	{
@@ -5365,7 +5386,7 @@ function printCommonFooter($zone='private')
     	
     	print '<!-- If page_y set, we set scollbar with it -->'."\n";
     	print "page_y=getParameterByName('page_y', 0);";
-    	print "if (page_y > 0) $('html, body').scrollTop(page_y);";
+    	print "if (page_y > 0) $('html, body').scrollTop(page_y);\n";
     	
     	print '<!-- Set handler to add page_y param on some a href links -->'."\n";
     	print 'jQuery(".reposition").click(function() {
@@ -5375,11 +5396,14 @@ function printCommonFooter($zone='private')
     	           });'."\n";
     	print '});'."\n";
     	
-    	print '<!-- Set handler to switch left menu page -->'."\n";
-    	print 'jQuery(".menuhider").click(function() {';
-    	print "  $('.side-nav').toggle();";
-    	if ($conf->theme == 'md') print "  $('.login_block').toggle();";
-    	print '});'."\n";
+    	if (empty($conf->dol_use_jmobile))
+    	{
+        	print '<!-- Set handler to switch left menu page -->'."\n";
+        	print 'jQuery(".menuhider").click(function() {';
+        	print "  $('.side-nav').toggle();";
+        	if ($conf->theme == 'md') print "  $('.login_block').toggle();";
+        	print '});'."\n";
+    	}
     	
     	print '</script>'."\n";
 	}
@@ -5411,7 +5435,7 @@ function printCommonFooter($zone='private')
 		print 'window.console && console.log("';
 		if (! empty($conf->global->MEMCACHED_SERVER)) print 'MEMCACHED_SERVER='.$conf->global->MEMCACHED_SERVER.' - ';
 		print 'MAIN_OPTIMIZE_SPEED='.(isset($conf->global->MAIN_OPTIMIZE_SPEED)?$conf->global->MAIN_OPTIMIZE_SPEED:'off');
-		if ($micro_start_time)
+		if (! empty($micro_start_time))   // Works only if MAIN_SHOW_TUNING_INFO is defined at $_SERVER level. Not in global variable.
 		{
 			$micro_end_time = microtime(true);
 			print ' - Build time: '.ceil(1000*($micro_end_time-$micro_start_time)).' ms';

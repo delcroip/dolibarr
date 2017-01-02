@@ -152,6 +152,8 @@ class CMailFile
 			$this->msgishtml = $msgishtml;
 		}
 
+		if (! empty($conf->global->MAIN_MAIL_FORCE_CONTENT_TYPE_TO_HTML)) $this->msgishtml=1; // To force to send everything with content type html.
+		    
 		// Detect images
 		if ($this->msgishtml)
 		{
@@ -456,7 +458,7 @@ class CMailFile
 	 */
 	function sendfile()
 	{
-		global $conf,$db;
+		global $conf,$db,$langs;
 
 		$errorlevel=error_reporting();
 		error_reporting($errorlevel ^ E_WARNING);   // Desactive warnings
@@ -479,6 +481,37 @@ class CMailFile
                 return $reshook;
             }
 
+            // Check number of recipient is lower or equal than MAIL_MAX_NB_OF_RECIPIENTS_IN_SAME_EMAIL
+            if (empty($conf->global->MAIL_MAX_NB_OF_RECIPIENTS_IN_SAME_EMAIL)) $conf->global->MAIL_MAX_NB_OF_RECIPIENTS_IN_SAME_EMAIL=10;
+            $tmparray1 = explode(',', $this->addr_to);
+            if (count($tmparray1) > $conf->global->MAIL_MAX_NB_OF_RECIPIENTS_TO_IN_SAME_EMAIL)
+            {
+                $this->error = 'Too much recipients in to:';
+                dol_syslog("CMailFile::sendfile: mail end error=" . $this->error, LOG_WARNING);
+                return false;
+            }
+            $tmparray2 = explode(',', $this->addr_cc);
+            if (count($tmparray2) > $conf->global->MAIL_MAX_NB_OF_RECIPIENTS_CC_IN_SAME_EMAIL)
+            {
+                $this->error = 'Too much recipients in cc:';
+                dol_syslog("CMailFile::sendfile: mail end error=" . $this->error, LOG_WARNING);
+                return false;
+            }
+            $tmparray3 = explode(',', $this->addr_bcc);
+            if (count($tmparray3) > $conf->global->MAIL_MAX_NB_OF_RECIPIENTS_BCC_IN_SAME_EMAIL)
+            {
+                $this->error = 'Too much recipients in bcc:';
+                dol_syslog("CMailFile::sendfile: mail end error=" . $this->error, LOG_WARNING);
+                return false;
+            }
+            if ((count($tmparray1)+count($tmparray2)+count($tmparray3)) > $conf->global->MAIL_MAX_NB_OF_RECIPIENTS_IN_SAME_EMAIL)
+            {
+                $this->error = 'Too much recipients in to:, cc:, bcc:';
+                dol_syslog("CMailFile::sendfile: mail end error=" . $this->error, LOG_WARNING);
+                return false;
+            }
+            
+                
 			// Action according to choosed sending method
 			if ($conf->global->MAIN_MAIL_SENDMODE == 'mail')
 			{
@@ -507,8 +540,6 @@ class CMailFile
 				}
 				else
 				{
-					dol_syslog("CMailFile::sendfile: mail start HOST=".ini_get('SMTP').", PORT=".ini_get('smtp_port'), LOG_DEBUG);
-
 					$bounce = '';	// By default
 					if (! empty($conf->global->MAIN_MAIL_ALLOW_SENDMAIL_F))
 					{
@@ -521,13 +552,14 @@ class CMailFile
                     {
                         $bounce .= ($bounce?' ':'').'-ba';
                     }
-
+                    dol_syslog("CMailFile::sendfile: mail start HOST=".ini_get('SMTP').", PORT=".ini_get('smtp_port').", additionnal_parameters=".$bounce, LOG_DEBUG);
+                    
 					$this->message=stripslashes($this->message);
 
 					if (! empty($conf->global->MAIN_MAIL_DEBUG)) $this->dump_mail();
 
 					if (! empty($bounce)) $res = mail($dest,$this->encodetorfc2822($this->subject),$this->message,$this->headers, $bounce);
-					else $res = mail($dest,$this->encodetorfc2822($this->subject),$this->message,$this->headers);
+					else $res = mail($dest, $this->encodetorfc2822($this->subject), $this->message, $this->headers);
 
 					if (! $res)
 					{
@@ -539,7 +571,8 @@ class CMailFile
 						{
 							$this->error.=" to HOST=".ini_get('SMTP').", PORT=".ini_get('smtp_port');	// This values are value used only for non linuxlike systems
 						}
-						$this->error.=".<br>Check your server logs and your firewalls setup";
+						$this->error.=".<br>";
+						$this->error.=$langs->trans("ErrorPhpMailDelivery");
 						dol_syslog("CMailFile::sendfile: mail end error=".$this->error, LOG_ERR);
 					}
 					else
@@ -824,7 +857,7 @@ class CMailFile
 		global $conf;
 		$out = "";
 
-		$host = dol_getprefix();
+		$host = dol_getprefix('email');
 
 		// Sender
 		//$out.= "Sender: ".getValidAddress($this->addr_from,2)).$this->eol2;
@@ -840,7 +873,7 @@ class CMailFile
 
 		// Receiver
 		if (isset($this->addr_cc)   && $this->addr_cc)   $out.= "Cc: ".$this->getValidAddress($this->addr_cc,2).$this->eol2;
-		if (isset($this->addr_bcc)  && $this->addr_bcc)  $out.= "Bcc: ".$this->getValidAddress($this->addr_bcc,2).$this->eol2;
+		if (isset($this->addr_bcc)  && $this->addr_bcc)  $out.= "Bcc: ".$this->getValidAddress($this->addr_bcc,2).$this->eol2;    // Question: bcc must not be into header, only into SMTP command "RCPT TO". Does php mail support this ? 
 
 		// Delivery receipt
 		if (isset($this->deliveryreceipt) && $this->deliveryreceipt == 1) $out.= "Disposition-Notification-To: ".$this->getValidAddress($this->addr_from,2).$this->eol2;
@@ -942,8 +975,9 @@ class CMailFile
 			$strContent = preg_replace("/\r\n/si", "\n", $strContent);
 		}
 
-        //$strContent = rtrim(chunk_split($strContent));    // Function chunck_split seems bugged
-        $strContent = rtrim(wordwrap($strContent));
+		// Make RFC2045 Compliant, split lines
+        //$strContent = rtrim(chunk_split($strContent));    // Function chunck_split seems ko if not used on a base64 content
+        $strContent = rtrim(wordwrap($strContent));   // TODO Using this method creates unexpected line break on text/plain content.
 
 		if ($this->msgishtml)
 		{
@@ -1105,12 +1139,12 @@ class CMailFile
 		$_retVal = true;	// Indicates if Object was created or not
 		$server_response = '';
 
-		while ( substr($server_response,3,1) != ' ' )
+		while (substr($server_response,3,1) != ' ')
 		{
-			if( !( $server_response = fgets($socket, 256) ) )
+			if (! ($server_response = fgets($socket, 256)) )
 			{
 				$this->error="Couldn't get mail server response codes";
-				$_retVal = false;
+				return false;
 			}
 		}
 
