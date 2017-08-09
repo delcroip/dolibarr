@@ -433,7 +433,7 @@ if ($id > 0 || ! empty($ref))
         if ($object->canBeConciliated() > 0) {
             // If not cash account and can be reconciliate
             if ($user->rights->banque->consolidate) {
-                print '<a class="butAction" href="'.DOL_URL_ROOT.'/compta/bank/bankentries.php?action=reconcile'.$param.'">'.$langs->trans("Conciliate").'</a>';
+                print '<a class="butAction" href="'.DOL_URL_ROOT.'/compta/bank/bankentries.php?action=reconcile'.$param.(!empty($page)?('&page='.$page):'')'">'.$langs->trans("Conciliate").'</a>';
             } else {
                 print '<a class="butActionRefused" title="'.$langs->trans("NotEnoughPermissions").'" href="#">'.$langs->trans("Conciliate").'</a>';
             }
@@ -585,7 +585,7 @@ if ($resql)
 	print '<input type="hidden" name="ref" value="'.$ref.'">';
 	if (GETPOST('bid')) print '<input type="hidden" name="bid" value="'.GETPOST("bid").'">';
 
-	// Form to reconcile
+	// Form to nle
 	if ($user->rights->banque->consolidate && $action == 'reconcile')
 	{
 //	    print '<table class="noborder" width="100%">';
