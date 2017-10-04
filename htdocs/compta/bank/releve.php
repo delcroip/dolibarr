@@ -131,9 +131,9 @@ if ($action=="dl" && $numref > 0)
     dol_mkdir($outdirinvoices);
     dol_mkdir($outdirsupplierinvoices);
 
-    //$zipname = $object->label.'-'.$numref . '.zip';
-    //$zip = new ZipArchive();
-    //$zip->open($zipname, ZipArchive::OVERWRITE);
+    $zipname = $object->label.'-'.$numref . '.zip';
+    $zip = new ZipArchive();
+    $zip->open($zipname, ZipArchive::OVERWRITE|ZipArchive::CREATE);
 
     $sql = $sqlrequestforbankline;
 
@@ -247,37 +247,26 @@ if ($action=="dl" && $numref > 0)
             }
             $log.="\n";
 
-            /*if (! empty($upload_dir))
-            {
-                $files = dol_dir_list($upload_dir, "files", 0, '', '(\.meta|_preview.*\.png)$', '', SORT_ASC, 1);
-
-                if (is_array($files)) {
-                    foreach ($files as $file) {
-                        $zip->addFile($file["fullname"], $file["name"]); //
-                        $log .= $key . ',' . $file["name"] . "\n";
-                    }
-                } else {
-                    $log .= $key . ',' . $langs->trans("Nofile") . "\n";
-                }
-
-            }*/
         }
     }
 
     $db->free($resd);
 
-
-    //$zip->addFromString('log '.$numref.'.csv', $log);
-    //$zip->close();
+	// add all the file from the temp directory
+    $options = array( 'remove_all_path' => TRUE);
+    $zip->addGlob($outdirinvoices.'/*', GLOB_BRACE, $options);
+	// add the log
+    $zip->addFromString('log '.$numref.'.csv', $log);
+    $zip->close();
 
     // /Then download the zipped file.
-    /*header('Content-Type: application/zip');
+    header('Content-Type: application/zip');
     header('Content-disposition: attachment; filename=' . $zipname);
     header('Content-Length: ' . filesize($zipname));
 
     readfile($zipname);
 
-    exit;*/
+    exit;
 }
 
 
