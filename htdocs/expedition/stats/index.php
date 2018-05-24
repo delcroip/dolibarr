@@ -269,26 +269,24 @@ print '<td align="center">'.$langs->trans("AmountAverage").'</td>';*/
 print '</tr>';
 
 $oldyear=0;
-$var=true;
 foreach ($data as $val)
 {
 	$year = $val['year'];
 	while (! empty($year) && $oldyear > $year+1)
 	{ // If we have empty year
 		$oldyear--;
-		
-		$var=!$var;
-		print '<tr '.$bc[$var].' height="24">';
+
+
+		print '<tr class="oddeven" height="24">';
 		print '<td align="center"><a href="'.$_SERVER["PHP_SELF"].'?year='.$oldyear.'&amp;mode='.$mode.'">'.$oldyear.'</a></td>';
-	
+
 		print '<td align="right">0</td>';
 		/*print '<td align="right">0</td>';
 		print '<td align="right">0</td>';*/
 		print '</tr>';
 	}
 
-	$var=!$var;
-	print '<tr '.$bc[$var].' height="24">';
+	print '<tr class="oddeven" height="24">';
 	print '<td align="center">';
 	if ($year) print '<a href="'.$_SERVER["PHP_SELF"].'?year='.$year.'&amp;mode='.$mode.'">'.$year.'</a>';
 	else print $langs->trans("ValidationDateNotDefinedEvenIfShipmentValidated");
@@ -307,7 +305,7 @@ print '</div><div class="fichetwothirdright"><div class="ficheaddleft">';
 
 
 // Show graphs
-print '<table class="border" width="100%"><tr valign="top"><td align="center">';
+print '<table class="border" width="100%"><tr class="pair nohover"><td align="center">';
 if ($mesg) { print $mesg; }
 else {
     print $px1->show();

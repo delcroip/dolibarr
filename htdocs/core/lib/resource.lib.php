@@ -40,7 +40,7 @@ function resource_prepare_head($object)
     	$head[$h][2] = 'resource';
 	$h++;
 
-	if (empty($conf->global->MAIN_DISABLE_CONTACTS_TAB))
+	if (empty($conf->global->MAIN_DISABLE_CONTACTS_TAB) && (empty($conf->global->RESOURCE_HIDE_ADD_CONTACT_USER) || empty($conf->global->RESOURCE_HIDE_ADD_CONTACT_THIPARTY)))
 	{
 	    $nbContact = count($object->liste_contact(-1,'internal')) + count($object->liste_contact(-1,'external'));
 	    $head[$h][0] = DOL_URL_ROOT.'/resource/contact.php?id='.$object->id;
@@ -70,7 +70,7 @@ function resource_prepare_head($object)
 
 	require_once DOL_DOCUMENT_ROOT.'/core/lib/files.lib.php';
 	$upload_dir = $conf->resource->dir_output . "/" . dol_sanitizeFileName($object->ref);
-	$nbFiles = count(dol_dir_list($upload_dir,'files',0,'','(\.meta|_preview\.png)$'));
+	$nbFiles = count(dol_dir_list($upload_dir,'files',0,'','(\.meta|_preview.*\.png)$'));
 	$head[$h][0] = DOL_URL_ROOT.'/resource/document.php?id='.$object->id;
 	$head[$h][1] = $langs->trans("Documents");
 	if($nbFiles > 0) $head[$h][1].= ' <span class="badge">'.$nbFiles.'</span>';

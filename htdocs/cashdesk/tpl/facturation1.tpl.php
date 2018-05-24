@@ -19,6 +19,14 @@
  *
  */
 
+// Protection to avoid direct call of template
+if (empty($langs) || ! is_object($langs))
+{
+	print "Error, template page can't be called as URL";
+	exit;
+}
+
+
 $langs->load("main");
 $langs->load("bills");
 $langs->load("cashdesk");
@@ -38,15 +46,14 @@ $langs->load("cashdesk");
 
 		<input type="hidden" name="hdnSource" value="NULL" />
 
-		<table>
+		<table class="center">
 			<tr><th class="label1"><?php echo $langs->trans("FilterRefOrLabelOrBC"); ?></th><th class="label1"><?php echo $langs->trans("Designation"); ?></th></tr>
 			<tr>
 			<!-- Affichage de la reference et de la designation -->
+			<!-- Suppression de l'attribut onkeyup qui causait un probleme d'emulation avec les douchettes -->
 			<td><input class="texte_ref" type="text" id ="txtRef" name="txtRef" value="<?php echo $obj_facturation->ref() ?>"
 				onchange="javascript: setSource('REF');"
-				onkeyup="javascript: verifResultat('resultats_dhtml', this.value, <?php echo (isset($conf->global->BARCODE_USE_SEARCH_TO_SELECT) ? (int) $conf->global->BARCODE_USE_SEARCH_TO_SELECT : 1) ?>);"
-				onfocus="javascript: this.select(); verifResultat('resultats_dhtml', this.value, <?php echo (isset($conf->global->BARCODE_USE_SEARCH_TO_SELECT) ? (int) $conf->global->BARCODE_USE_SEARCH_TO_SELECT : 1) ?>);"
-				onBlur="javascript: document.getElementById('resultats_dhtml').innerHTML = '';"/>
+				onfocus="javascript: this.select();" />
 			</td>
 			<td class="select_design maxwidthonsmartphone">
             <?php /*
@@ -89,51 +96,54 @@ $langs->load("cashdesk");
 				</select>
 			</td>
 			</tr>
-			  <tr><td><div id="resultats_dhtml"></div></td></tr>
 		</table>
 	</form>
 
 	<form id="frmQte" class="formulaire1" method="post" action="facturation_verif.php?action=ajout_article" onsubmit ="javascript: return verifSaisie();">
 		<input type="hidden" name="token" value="<?php echo $_SESSION['newtoken']; ?>" />
-		<table>
-			<tr><th><?php echo $langs->trans("Qty"); ?></th>
-			<th><?php echo $langs->trans("Stock"); ?></th>
+		<table class="center">
+			<tr>
+			<th><?php echo $langs->trans("Qty"); ?></th>
 			<th><?php echo $langs->trans("PriceUHT"); ?></th>
-			<th></th>
 			<th><?php echo $langs->trans("Discount"); ?> (%)</th>
-			<th><?php echo $langs->trans("TotalHT"); ?></th>
-            <th>&nbsp;</th>
             <th><?php echo $langs->trans("VATRate"); ?></th>
+			<th></th>
             </tr>
 			<tr>
 				<td><input class="texte1 maxwidth50onsmartphone" type="text" id="txtQte" name="txtQte" value="1" onkeyup="javascript: modif();" onfocus="javascript: this.select();" />
 <?php print genkeypad("txtQte", "frmQte");?>
 				</td>
-				<!-- Affichage du stock pour l'article courant -->
-				<td>
-				<input class="texte1_off maxwidth50onsmartphone" type="text" name="txtStock" value="<?php echo $obj_facturation->stock() ?>" disabled />
-				</td>
 				<!-- Show unit price -->
 				<?php // TODO Remove the disabled and use this value when adding product into cart ?>
 				<td><input class="texte1_off maxwidth50onsmartphone" type="text" name="txtPrixUnit" value="<?php echo price2num($obj_facturation->prix(), 'MU'); ?>" onchange="javascript: modif();" disabled /></td>
-				<td></td>
     			<!-- Choix de la remise -->
     			<td><input class="texte1 maxwidth50onsmartphone" type="text" id="txtRemise" name="txtRemise" value="0" onkeyup="javascript: modif();" onfocus="javascript: this.select();"/>
 					<?php print genkeypad("txtRemise", "frmQte");?>
     			</td>
-    			<!-- Affichage du total HT -->
-    			<td><input class="texte1_off maxwidth50onsmartphone" type="text" name="txtTotal" value="" disabled /></td><td></td>
                 <!-- Choix du taux de TVA -->
-                <td class="select_tva">
-                <?php //var_dump($tab_tva); 
-					$tva_tx = $obj_facturation->tva();  // Try to get a previously entered VAT rowid. First time, this will return empty.
+                <td class="select_tva center">
+                <?php
+					$vatrate = $obj_facturation->vatrate;      // To get vat rate we just have selected
+
 					$buyer = new Societe($db);
 					if ($_SESSION["CASHDESK_ID_THIRDPARTY"] > 0) $buyer->fetch($_SESSION["CASHDESK_ID_THIRDPARTY"]);
-					
-					echo $form->load_tva('selTva', (isset($_POST["selTva"])?GETPOST("selTva",'alpha',2):-1), $mysoc, $buyer, 0, 0, '', false, -1);
+					echo $form->load_tva('selTva', (isset($_POST["selTva"])?GETPOST("selTva",'alpha',2):$vatrate), $mysoc, $buyer, 0, 0, '', false, -1);
 			    ?>
                 </td>
+				<td></td>
 			</tr>
+			<tr>
+				<!-- Affichage du stock pour l'article courant -->
+			<tr>
+				<td><?php echo $langs->trans("Stock"); ?></td>
+				<td>
+				<input class="texte1_off maxwidth50onsmartphone" type="text" name="txtStock" value="<?php echo $obj_facturation->stock() ?>" disabled />
+				</td>
+				<td><?php echo $langs->trans("TotalHT"); ?></td>
+    			<!-- Affichage du total HT -->
+    			<td colspan="2"><input class="texte1_off maxwidth50onsmartphone" type="text" name="txtTotal" value="" disabled /></td><td></td>
+			</tr>
+
 		</table>
 
 		<input class="button bouton_ajout_article" type="submit" id="sbmtEnvoyer" value="<?php echo $langs->trans("AddThisArticle"); ?>" />
@@ -149,13 +159,13 @@ $langs->load("cashdesk");
 			<tr><th class="label1"><?php echo $langs->trans("TotalTicket"); ?></th><th class="label1"><?php echo $langs->trans("Received"); ?></th><th class="label1"><?php echo $langs->trans("Change"); ?></th></tr>
 			<tr>
 			<!-- Affichage du montant du -->
-			<td><input class="texte2_off maxwidthonsmartphone" type="text" name="txtDu" value="<?php echo price2num($obj_facturation->prixTotalTtc(), 'MT'); ?>" disabled /></td>
+			<td><input class="texte2_off maxwidth100onsmartphone" type="text" name="txtDu" value="<?php echo price2num($obj_facturation->prixTotalTtc(), 'MT'); ?>" disabled /></td>
 			<!-- Choix du montant encaisse -->
-			<td><input class="texte2 maxwidthonsmartphone" type="text" id="txtEncaisse" name="txtEncaisse" value="" onkeyup="javascript: verifDifference();" onfocus="javascript: this.select();" />
+			<td><input class="texte2 maxwidth100onsmartphone" type="text" id="txtEncaisse" name="txtEncaisse" value="" onkeyup="javascript: verifDifference();" onfocus="javascript: this.select();" />
 <?php print genkeypad("txtEncaisse", "frmDifference");?>
 			</td>
 			<!-- Affichage du montant rendu -->
-			<td><input class="texte2_off maxwidthonsmartphone" type="text" name="txtRendu" value="0" disabled /></td>
+			<td><input class="texte2_off maxwidth100onsmartphone" type="text" name="txtRendu" value="0" disabled /></td>
 			</tr>
 			<tr>
 		</table>
@@ -173,7 +183,7 @@ $langs->load("cashdesk");
 			else print '<input class="button bouton_mode_reglement" type="submit" name="btnModeReglement" value="'.$langs->trans("Cash").'" onclick="javascript: verifClic(\'ESP\');" />';
 			print '</div>';
 			print '<div class="inline-block" style="margin: 6px;">';
-			if (empty($_SESSION['CASHDESK_ID_BANKACCOUNT_CHEQUE']) || $_SESSION['CASHDESK_ID_BANKACCOUNT_CHEQUE'] < 0)
+			if (empty($_SESSION['CASHDESK_ID_BANKACCOUNT_CB']) || $_SESSION['CASHDESK_ID_BANKACCOUNT_CB'] < 0)
 			{
 				$langs->load("errors");
 				print '<input class="bouton_mode_reglement_disabled" type="button" name="btnModeReglement" value="'.$langs->trans("CreditCard").'" title="'.dol_escape_htmltag($langs->trans("ErrorModuleSetupNotComplete")).'" />';
@@ -181,7 +191,7 @@ $langs->load("cashdesk");
 			else print '<input class="button bouton_mode_reglement" type="submit" name="btnModeReglement" value="'.$langs->trans("CreditCard").'" onclick="javascript: verifClic(\'CB\');" />';
 			print '</div>';
 			print '<div class="inline-block" style="margin: 6px;">';
-			if (empty($_SESSION['CASHDESK_ID_BANKACCOUNT_CB']) || $_SESSION['CASHDESK_ID_BANKACCOUNT_CB'] < 0)
+			if (empty($_SESSION['CASHDESK_ID_BANKACCOUNT_CHEQUE']) || $_SESSION['CASHDESK_ID_BANKACCOUNT_CHEQUE'] < 0)
 			{
 				$langs->load("errors");
 				print '<input class="bouton_mode_reglement_disabled" type="button" name="btnModeReglement" value="'.$langs->trans("CheckBank").'" title="'.dol_escape_htmltag($langs->trans("ErrorModuleSetupNotComplete")).'" />';

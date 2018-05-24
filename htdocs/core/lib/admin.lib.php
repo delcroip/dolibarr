@@ -133,7 +133,7 @@ function run_sql($sqlfile,$silent=1,$entity='',$usesavepoint=1,$handler='',$oker
     $error=0;
     $i=0;
     $buffer = '';
-    $arraysql = Array();
+    $arraysql = array();
 
     // Get version of database
     $versionarray=$db->getVersionArray();
@@ -143,10 +143,10 @@ function run_sql($sqlfile,$silent=1,$entity='',$usesavepoint=1,$handler='',$oker
     {
         while (! feof($fp))
         {
-            $buf = fgets($fp, 4096);
+            $buf = fgets($fp, 32768);
 
             // Test if request must be ran only for particular database or version (if yes, we must remove the -- comment)
-            if (preg_match('/^--\sV(MYSQL|PGSQL|)([0-9\.]+)/i',$buf,$reg))
+            if (preg_match('/^--\sV(MYSQL|PGSQL)([^\s]*)/i',$buf,$reg))
             {
             	$qualified=1;
 
@@ -159,28 +159,41 @@ function run_sql($sqlfile,$silent=1,$entity='',$usesavepoint=1,$handler='',$oker
             	// restrict on version
             	if ($qualified)
             	{
-
-	                $versionrequest=explode('.',$reg[2]);
-	                //print var_dump($versionrequest);
-	                //print var_dump($versionarray);
-	                if (! count($versionrequest) || ! count($versionarray) || versioncompare($versionrequest,$versionarray) > 0)
-	                {
-	                	$qualified=0;
-	                }
+            		if (! empty($reg[2]))
+            		{
+            			if (is_numeric($reg[2]))	// This is a version
+            			{
+			                $versionrequest=explode('.',$reg[2]);
+			                //print var_dump($versionrequest);
+			                //print var_dump($versionarray);
+			                if (! count($versionrequest) || ! count($versionarray) || versioncompare($versionrequest,$versionarray) > 0)
+			                {
+			                	$qualified=0;
+			                }
+            			}
+            			else						// This is a test on a constant. For example when we have -- VMYSQLUTF8UNICODE, we test constant $conf->global->UTF8UNICODE
+            			{
+            				$dbcollation = strtoupper(preg_replace('/_/', '', $conf->db->dolibarr_main_db_collation));
+            				//var_dump($reg[2]);
+            				//var_dump($dbcollation);
+            				if (empty($conf->db->dolibarr_main_db_collation) || ($reg[2] != $dbcollation)) $qualified=0;
+            				//var_dump($qualified);
+            			}
+            		}
             	}
 
                 if ($qualified)
                 {
                     // Version qualified, delete SQL comments
-                    $buf=preg_replace('/^--\sV(MYSQL|PGSQL|)([0-9\.]+)/i','',$buf);
+                    $buf=preg_replace('/^--\sV(MYSQL|PGSQL)([^\s]*)/i','',$buf);
                     //print "Ligne $i qualifi?e par version: ".$buf.'<br>';
                 }
             }
 
             // Add line buf to buffer if not a comment
-            if (! preg_match('/^--/',$buf))
+            if (! preg_match('/^\s*--/',$buf))
             {
-                $buf=preg_replace('/--.*$/','',$buf); //remove comment from a line that not start with -- before add it to the buffer
+                $buf=preg_replace('/([,;ERLT\)])\s*--.*$/i','\1',$buf); //remove comment from a line that not start with -- before add it to the buffer
                 $buffer .= trim($buf);
             }
 
@@ -500,7 +513,7 @@ function dolibarr_set_const($db, $name, $value, $type='chaine', $visible=0, $not
         $sql.= " VALUES (";
         $sql.= $db->encrypt($name,1);
         $sql.= ", ".$db->encrypt($value,1);
-        $sql.= ",'".$type."',".$visible.",'".$db->escape($note)."',".$entity.")";
+        $sql.= ",'".$db->escape($type)."',".$visible.",'".$db->escape($note)."',".$entity.")";
 
         //print "sql".$value."-".pg_escape_string($value)."-".$sql;exit;
         //print "xx".$db->escape($value);
@@ -523,6 +536,43 @@ function dolibarr_set_const($db, $name, $value, $type='chaine', $visible=0, $not
 }
 
 
+
+
+/**
+ * Prepare array with list of tabs
+ *
+ * @return  array				Array of tabs to show
+ */
+function modules_prepare_head()
+{
+	global $langs, $conf, $user;
+	$h = 0;
+	$head = array();
+
+	$head[$h][0] = DOL_URL_ROOT."/admin/modules.php?mode=common";
+	$head[$h][1] = $langs->trans("AvailableModules");
+	$head[$h][2] = 'common';
+	$h++;
+
+	$head[$h][0] = DOL_URL_ROOT."/admin/modules.php?mode=marketplace";
+	$head[$h][1] = $langs->trans("ModulesMarketPlaces");
+	$head[$h][2] = 'marketplace';
+	$h++;
+
+	$head[$h][0] = DOL_URL_ROOT."/admin/modules.php?mode=deploy";
+	$head[$h][1] = $langs->trans("AddExtensionThemeModuleOrOther");
+	$head[$h][2] = 'deploy';
+	$h++;
+
+	$head[$h][0] = DOL_URL_ROOT."/admin/modules.php?mode=develop";
+	$head[$h][1] = $langs->trans("ModulesDevelopYourModule");
+	$head[$h][2] = 'develop';
+	$h++;
+
+	return $head;
+}
+
+
 /**
  * Prepare array with list of tabs
  *
@@ -530,7 +580,7 @@ function dolibarr_set_const($db, $name, $value, $type='chaine', $visible=0, $not
  */
 function security_prepare_head()
 {
-    global $langs, $conf, $user;
+    global $db, $langs, $conf, $user;
     $h = 0;
     $head = array();
 
@@ -545,9 +595,16 @@ function security_prepare_head()
     $h++;
 
     $head[$h][0] = DOL_URL_ROOT."/admin/security_file.php";
-    $head[$h][1] = $langs->trans("Files");
+    $head[$h][1] = $langs->trans("Files").' ('.$langs->trans("Upload").')';
     $head[$h][2] = 'file';
     $h++;
+
+    /*
+    $head[$h][0] = DOL_URL_ROOT."/admin/security_file_download.php";
+    $head[$h][1] = $langs->trans("Files").' ('.$langs->trans("Download").')';
+    $head[$h][2] = 'filedownload';
+    $h++;
+	*/
 
     $head[$h][0] = DOL_URL_ROOT."/admin/proxy.php";
     $head[$h][1] = $langs->trans("ExternalAccess");
@@ -559,8 +616,26 @@ function security_prepare_head()
     $head[$h][2] = 'audit';
     $h++;
 
+
+    // Show permissions lines
+    $nbPerms=0;
+    $sql = "SELECT COUNT(r.id) as nb";
+    $sql.= " FROM ".MAIN_DB_PREFIX."rights_def as r";
+    $sql.= " WHERE r.libelle NOT LIKE 'tou%'";    // On ignore droits "tous"
+    $sql.= " AND entity = ".$conf->entity;
+    $sql.= " AND bydefault = 1";
+    if (empty($conf->global->MAIN_USE_ADVANCED_PERMS)) $sql.= " AND r.perms NOT LIKE '%_advance'";  // Hide advanced perms if option is not enabled
+    $resql = $db->query($sql);
+    if ($resql)
+    {
+    	$obj = $db->fetch_object($resql);
+    	if ($obj) $nbPerms = $obj->nb;
+    }
+    else dol_print_error($db);
+
     $head[$h][0] = DOL_URL_ROOT."/admin/perms.php";
     $head[$h][1] = $langs->trans("DefaultRights");
+    if ($nbPerms > 0) $head[$h][1].= ' <span class="badge">'.$nbPerms.'</span>';
     $head[$h][2] = 'default';
     $h++;
 
@@ -597,6 +672,50 @@ function translation_prepare_head()
     return $head;
 }
 
+
+/**
+ * Prepare array with list of tabs
+ *
+ * @return  array				Array of tabs to show
+ */
+function defaultvalues_prepare_head()
+{
+    global $langs, $conf, $user;
+    $h = 0;
+    $head = array();
+
+    $head[$h][0] = DOL_URL_ROOT."/admin/defaultvalues.php?mode=createform";
+    $head[$h][1] = $langs->trans("DefaultCreateForm");
+    $head[$h][2] = 'createform';
+    $h++;
+
+    $head[$h][0] = DOL_URL_ROOT."/admin/defaultvalues.php?mode=filters";
+    $head[$h][1] = $langs->trans("DefaultSearchFilters");
+    $head[$h][2] = 'filters';
+    $h++;
+
+    $head[$h][0] = DOL_URL_ROOT."/admin/defaultvalues.php?mode=sortorder";
+    $head[$h][1] = $langs->trans("DefaultSortOrder");
+    $head[$h][2] = 'sortorder';
+    $h++;
+
+    $head[$h][0] = DOL_URL_ROOT."/admin/defaultvalues.php?mode=focus";
+    $head[$h][1] = $langs->trans("DefaultFocus");
+    $head[$h][2] = 'focus';
+    $h++;
+
+    /*$head[$h][0] = DOL_URL_ROOT."/admin/translation.php?mode=searchkey";
+    $head[$h][1] = $langs->trans("TranslationKeySearch");
+    $head[$h][2] = 'searchkey';
+    $h++;*/
+
+    complete_head_from_modules($conf,$langs,null,$head,$h,'defaultvalues_admin');
+
+    complete_head_from_modules($conf,$langs,null,$head,$h,'defaultvalues_admin','remove');
+
+
+    return $head;
+}
 
 
 /**
@@ -712,7 +831,7 @@ function purgeSessions($mysessionid)
  */
 function activateModule($value,$withdeps=1)
 {
-    global $db, $modules, $langs, $conf;
+    global $db, $modules, $langs, $conf, $mysoc;
 
 	// Check parameters
 	if (empty($value)) {
@@ -751,7 +870,7 @@ function activateModule($value,$withdeps=1)
     // Test if Dolibarr version ok
     $verdol=versiondolibarrarray();
     $vermin=isset($objMod->need_dolibarr_version)?$objMod->need_dolibarr_version:0;
-    //print 'eee '.versioncompare($verdol,$vermin).' - '.join(',',$verdol).' - '.join(',',$vermin);exit;
+    //print 'version: '.versioncompare($verdol,$vermin).' - '.join(',',$verdol).' - '.join(',',$vermin);exit;
 	if (is_array($vermin) && versioncompare($verdol, $vermin) < 0) {
 		$ret['errors'][] = $langs->trans("ErrorModuleRequireDolibarrVersion", versiontostring($vermin));
 		return $ret;
@@ -768,8 +887,9 @@ function activateModule($value,$withdeps=1)
         return $ret;
     }
 
-    $result=$objMod->init();
-    if ($result <= 0) 
+    $result=$objMod->init();    // Enable module
+
+    if ($result <= 0)
     {
         $ret['errors'][]=$objMod->error;
     }
@@ -781,7 +901,7 @@ function activateModule($value,$withdeps=1)
             {
                 // Activation of modules this module depends on
                 // this->depends may be array('modModule1', 'mmodModule2') or array('always'=>"modModule1", 'FR'=>'modModule2')
-                foreach ($objMod->depend as $key => $modulestring)
+                foreach ($objMod->depends as $key => $modulestring)
                 {
                     if ((! is_numeric($key)) && $key != 'always' && $key != $mysoc->country_code)
                     {
@@ -804,19 +924,19 @@ function activateModule($value,$withdeps=1)
     						break;
                 		}
                 	}
-    				
+
     				if ($activate)
     				{
     				    $ret['nbmodules']+=$resarray['nbmodules'];
     				    $ret['nbperms']+=$resarray['nbperms'];
     				}
-    				else 
+    				else
     				{
     				    $ret['errors'][] = $langs->trans('activateModuleDependNotSatisfied', $objMod->name, $modulestring);
     				}
                 }
             }
-    
+
             if (isset($objMod->conflictwith) && is_array($objMod->conflictwith) && ! empty($objMod->conflictwith))
             {
                 // Desactivation des modules qui entrent en conflit
@@ -835,12 +955,12 @@ function activateModule($value,$withdeps=1)
         }
     }
 
-    if (! count($ret['errors'])) 
+    if (! count($ret['errors']))
     {
         $ret['nbmodules']++;
         $ret['nbperms']+=count($objMod->rights);
     }
-    
+
     return $ret;
 }
 
@@ -887,7 +1007,8 @@ function unActivateModule($value, $requiredby=1)
     {
         //print $dir.$modFile;
     	// TODO Replace this after DolibarrModules is moved as abstract class with a try catch to show module we try to disable has not been found or could not be loaded
-        $genericMod = new DolibarrModules($db);
+        include_once DOL_DOCUMENT_ROOT.'/core/modules/DolibarrModules.class.php';
+    	$genericMod = new DolibarrModules($db);
         $genericMod->name=preg_replace('/^mod/i','',$modName);
         $genericMod->rights_class=strtolower(preg_replace('/^mod/i','',$modName));
         $genericMod->const_name='MAIN_MODULE_'.strtoupper(preg_replace('/^mod/i','',$modName));
@@ -911,7 +1032,8 @@ function unActivateModule($value, $requiredby=1)
 
 
 /**
- *  Add external modules to list of dictionaries
+ *  Add external modules to list of dictionaries.
+ *  Addition is done into var $taborder, $tabname, etc... that are passed with pointers.
  *
  * 	@param		array		$taborder			Taborder
  * 	@param		array		$tabname			Tabname
@@ -977,23 +1099,20 @@ function complete_dictionary_with_modules(&$taborder,&$tabname,&$tablib,&$tabsql
                         if ($modulequalified)
                         {
 							// Load languages files of module
-                        	if (isset($objMod->langfiles) && is_array($objMod->langfiles))
-                            	{
-                             		foreach($objMod->langfiles as $langfile)
-                              		{
-	                               		$langs->load($langfile);
-        	                       	}
-              			}
+							if (isset($objMod->langfiles) && is_array($objMod->langfiles)) {
+								foreach ($objMod->langfiles as $langfile) {
+									$langs->load($langfile);
+								}
+							}
 
-                            // Complete arrays
-                            //&$tabname,&$tablib,&$tabsql,&$tabsqlsort,&$tabfield,&$tabfieldvalue,&$tabfieldinsert,&$tabrowid,&$tabcond
+                            // Complete the arrays &$tabname,&$tablib,&$tabsql,&$tabsqlsort,&$tabfield,&$tabfieldvalue,&$tabfieldinsert,&$tabrowid,&$tabcond
                             if (empty($objMod->dictionaries) && ! empty($objMod->dictionnaries)) $objMod->dictionaries=$objMod->dictionnaries;		// For backward compatibility
 
                             if (! empty($objMod->dictionaries))
                             {
                                 //var_dump($objMod->dictionaries['tabname']);
                                 $nbtabname=$nbtablib=$nbtabsql=$nbtabsqlsort=$nbtabfield=$nbtabfieldvalue=$nbtabfieldinsert=$nbtabrowid=$nbtabcond=$nbtabfieldcheck=$nbtabhelp=0;
-                                foreach($objMod->dictionaries['tabname'] as $val)        { $nbtabname++; $taborder[] = max($taborder)+1; $tabname[] = $val; }
+                                foreach($objMod->dictionaries['tabname'] as $val)        { $nbtabname++; $taborder[] = max($taborder)+1; $tabname[] = $val; }		// Position
                                 foreach($objMod->dictionaries['tablib'] as $val)         { $nbtablib++; $tablib[] = $val; }
                                 foreach($objMod->dictionaries['tabsql'] as $val)         { $nbtabsql++; $tabsql[] = $val; }
                                 foreach($objMod->dictionaries['tabsqlsort'] as $val)     { $nbtabsqlsort++; $tabsqlsort[] = $val; }
@@ -1009,6 +1128,10 @@ function complete_dictionary_with_modules(&$taborder,&$tabname,&$tablib,&$tabsql
                                 {
                                     print 'Error in descriptor of module '.$const_name.'. Array ->dictionaries has not same number of record for key "tabname", "tablib", "tabsql" and "tabsqlsort"';
                                     //print "$const_name: $nbtabname=$nbtablib=$nbtabsql=$nbtabsqlsort=$nbtabfield=$nbtabfieldvalue=$nbtabfieldinsert=$nbtabrowid=$nbtabcond=$nbtabfieldcheck=$nbtabhelp\n";
+                                }
+                                else
+                                {
+                                	$taborder[] = 0;	// Add an empty line
                                 }
                             }
 
@@ -1028,6 +1151,71 @@ function complete_dictionary_with_modules(&$taborder,&$tabname,&$tablib,&$tabsql
     }
 
     return 1;
+}
+
+/**
+ *  Activate external modules mandatory when country is country_code
+ *
+ * 	@param		string		$country_code	CountryCode
+ * 	@return		int			1
+ */
+function activateModulesRequiredByCountry($country_code)
+{
+	global $db, $conf, $langs;
+
+	$modulesdir = dolGetModulesDirs();
+
+	foreach ($modulesdir as $dir)
+	{
+		// Load modules attributes in arrays (name, numero, orders) from dir directory
+		dol_syslog("Scan directory ".$dir." for modules");
+		$handle=@opendir(dol_osencode($dir));
+		if (is_resource($handle))
+		{
+			while (($file = readdir($handle))!==false)
+			{
+				if (is_readable($dir.$file) && substr($file, 0, 3) == 'mod'  && substr($file, dol_strlen($file) - 10) == '.class.php')
+				{
+					$modName = substr($file, 0, dol_strlen($file) - 10);
+
+					if ($modName)
+					{
+						include_once $dir.$file;
+						$objMod = new $modName($db);
+
+						$modulequalified=1;
+
+						// We discard modules according to features level (PS: if module is activated we always show it)
+						$const_name = 'MAIN_MODULE_'.strtoupper(preg_replace('/^mod/i','',get_class($objMod)));
+
+						if ($objMod->version == 'development'  && $conf->global->MAIN_FEATURES_LEVEL < 2) $modulequalified=0;
+						if ($objMod->version == 'experimental' && $conf->global->MAIN_FEATURES_LEVEL < 1) $modulequalified=0;
+						if(!empty($conf->global->$const_name)) $modulequalified=0; // already activated
+
+						if ($modulequalified)
+						{
+							// Load languages files of module
+							if (isset($objMod->automatic_activation) && is_array($objMod->automatic_activation) && isset($objMod->automatic_activation[$country_code]))
+							{
+								activateModule($modName);
+
+								setEventMessage($objMod->automatic_activation[$country_code],'warnings');
+							}
+
+						}
+						else dol_syslog("Module ".get_class($objMod)." not qualified");
+					}
+				}
+			}
+			closedir($handle);
+		}
+		else
+		{
+			dol_syslog("htdocs/admin/modules.php: Failed to open directory ".$dir.". See permission and open_basedir option.", LOG_WARNING);
+		}
+	}
+
+	return 1;
 }
 
 /**
@@ -1103,11 +1291,10 @@ function complete_elementList_with_modules(&$elementList)
 
                             $modules[$i] = $objMod;
                             $filename[$i]= $modName;
-                            $orders[$i]  = $objMod->family."_".$j;   // Tri par famille puis numero module
+                            $orders[$i]  = $objMod->family."_".$j;   // Sort on family then module number
+                            $dirmod[$i] = $dir;
                             //print "x".$modName." ".$orders[$i]."\n<br>";
-                            if (isset($categ[$objMod->special])) $categ[$objMod->special]++;                    // Array of all different modules categories
-                            else $categ[$objMod->special]=1;
-                            $dirmod[$i] = $dirroot;
+
                             if (! empty($objMod->module_parts['contactelement']))
                             {
                             	$elementList[$objMod->name] = $langs->trans($objMod->name);
@@ -1134,13 +1321,15 @@ function complete_elementList_with_modules(&$elementList)
 /**
  *	Show array with constants to edit
  *
- *	@param	array	$tableau		Array of constants
+ *	@param	array	$tableau		Array of constants array('key'=>type, ) where type can be 'string', 'text', 'textarea', 'html', 'yesno', 'emailtemplate:xxx', ...
  *	@param	int		$strictw3c		0=Include form into table (deprecated), 1=Form is outside table to respect W3C (no form into table), 2=No form nor button at all
+ *  @param  string  $helptext       Help
  *	@return	void
  */
-function form_constantes($tableau,$strictw3c=0)
+function form_constantes($tableau, $strictw3c=0, $helptext='')
 {
-    global $db,$bc,$langs,$conf,$_Avery_Labels;
+    global $db,$bc,$langs,$conf,$user;
+    global $_Avery_Labels;
 
     $form = new Form($db);
 
@@ -1148,15 +1337,27 @@ function form_constantes($tableau,$strictw3c=0)
 
     print '<table class="noborder" width="100%">';
     print '<tr class="liste_titre">';
-    print '<td>'.$langs->trans("Description").'</td>';
-    print '<td>'.$langs->trans("Value").'*</td>';
+    print '<td class="titlefield">'.$langs->trans("Description").'</td>';
+    print '<td>';
+    $text = $langs->trans("Value");
+    print $form->textwithpicto($text, $helptext, 1, 'help', '', 0, 2, 'idhelptext');
+    print '</td>';
     if (empty($strictw3c)) print '<td align="center" width="80">'.$langs->trans("Action").'</td>';
     print "</tr>\n";
-    $var=true;
 
     $listofparam=array();
-    foreach($tableau as $const)	// Loop on each param
+    foreach($tableau as $key => $const)	// Loop on each param
     {
+    	// $const is a const key like 'MYMODULE_ABC'
+    	if (is_numeric($key)) {
+    		$type = 'string';
+    	}
+    	else
+    	{
+    		$type = $const;
+    		$const = $key;
+    	}
+
         $sql = "SELECT ";
         $sql.= "rowid";
         $sql.= ", ".$db->decrypt('name')." as name";
@@ -1164,7 +1365,7 @@ function form_constantes($tableau,$strictw3c=0)
         $sql.= ", type";
         $sql.= ", note";
         $sql.= " FROM ".MAIN_DB_PREFIX."const";
-        $sql.= " WHERE ".$db->decrypt('name')." = '".$const."'";
+        $sql.= " WHERE ".$db->decrypt('name')." = '".$db->escape($const)."'";
         $sql.= " AND entity IN (0, ".$conf->entity.")";
         $sql.= " ORDER BY name ASC, entity DESC";
         $result = $db->query($sql);
@@ -1173,24 +1374,27 @@ function form_constantes($tableau,$strictw3c=0)
         if ($result)
         {
             $obj = $db->fetch_object($result);	// Take first result of select
-            $var=!$var;
 
-            // For avoid warning in strict mode
-            if (empty($obj)) {
-            	$obj = (object) array('rowid'=>'','name'=>'','value'=>'','type'=>'','note'=>'');
+            if (empty($obj))	// If not yet into table
+            {
+            	$obj = (object) array('rowid'=>'','name'=>$const,'value'=>'','type'=>$type,'note'=>'');
             }
 
-            if (empty($strictw3c)) print "\n".'<form action="'.$_SERVER["PHP_SELF"].'" method="POST">';
+            if (empty($strictw3c))
+            {
+            	print "\n".'<form action="'.$_SERVER["PHP_SELF"].'" method="POST">';
+            	print '<input type="hidden" name="token" value="'.$_SESSION['newtoken'].'">';
+            }
 
-            print "<tr ".$bc[$var].">";
+            print '<tr class="oddeven">';
 
             // Show constant
             print '<td>';
-            print '<input type="hidden" name="token" value="'.$_SESSION['newtoken'].'">';
-            print '<input type="hidden" name="action" value="update">';
+            if (empty($strictw3c)) print '<input type="hidden" name="action" value="update">';
             print '<input type="hidden" name="rowid'.(empty($strictw3c)?'':'[]').'" value="'.$obj->rowid.'">';
             print '<input type="hidden" name="constname'.(empty($strictw3c)?'':'[]').'" value="'.$const.'">';
-            print '<input type="hidden" name="constnote'.(empty($strictw3c)?'':'[]').'" value="'.nl2br(dol_escape_htmltag($obj->note)).'">';
+            print '<input type="hidden" name="constnote_'.$obj->name.'" value="'.nl2br(dol_escape_htmltag($obj->note)).'">';
+            print '<input type="hidden" name="consttype_'.$obj->name.'" value="'.($obj->type?$obj->type:'string').'">';
 
             print $langs->trans('Desc'.$const);
 
@@ -1237,34 +1441,57 @@ function form_constantes($tableau,$strictw3c=0)
                 }
                 print $form->selectarray('constvalue'.(empty($strictw3c)?'':'[]'),$arrayoflabels,($obj->value?$obj->value:'CARD'),1,0,0);
                 print '<input type="hidden" name="consttype" value="yesno">';
+                print '<input type="hidden" name="constnote'.(empty($strictw3c)?'':'[]').'" value="'.nl2br(dol_escape_htmltag($obj->note)).'">';
                 print '</td>';
             }
             else
             {
                 print '<td>';
-                if (in_array($const,array('ADHERENT_CARD_TEXT','ADHERENT_CARD_TEXT_RIGHT','ADHERENT_ETIQUETTE_TEXT')))
+                print '<input type="hidden" name="consttype'.(empty($strictw3c)?'':'[]').'" value="'.($obj->type?$obj->type:'string').'">';
+                print '<input type="hidden" name="constnote'.(empty($strictw3c)?'':'[]').'" value="'.nl2br(dol_escape_htmltag($obj->note)).'">';
+                if ($obj->type == 'textarea' || in_array($const,array('ADHERENT_CARD_TEXT','ADHERENT_CARD_TEXT_RIGHT','ADHERENT_ETIQUETTE_TEXT')))
                 {
                     print '<textarea class="flat" name="constvalue'.(empty($strictw3c)?'':'[]').'" cols="50" rows="5" wrap="soft">'."\n";
                     print $obj->value;
                     print "</textarea>\n";
-                    print '<input type="hidden" name="consttype" value="texte">';
                 }
-                else if (in_array($const,array('ADHERENT_AUTOREGISTER_NOTIF_MAIL','ADHERENT_AUTOREGISTER_MAIL','ADHERENT_MAIL_VALID','ADHERENT_MAIL_COTIS','ADHERENT_MAIL_RESIL')))
+                elseif ($obj->type == 'html')
                 {
-                    require_once DOL_DOCUMENT_ROOT.'/core/class/doleditor.class.php';
-                    $doleditor=new DolEditor('constvalue_'.$const.(empty($strictw3c)?'':'[]'),$obj->value,'',160,'dolibarr_notes','',false,false,$conf->fckeditor->enabled,ROWS_5,'90%');
-                    $doleditor->Create();
-                    print '<input type="hidden" name="consttype'.(empty($strictw3c)?'':'[]').'" value="texte">';
+                	require_once DOL_DOCUMENT_ROOT.'/core/class/doleditor.class.php';
+                	$doleditor=new DolEditor('constvalue_'.$const.(empty($strictw3c)?'':'[]'),$obj->value,'',160,'dolibarr_notes','',false,false,$conf->fckeditor->enabled,ROWS_5,'90%');
+                	$doleditor->Create();
                 }
-                else if ($obj->type == 'yesno')
+                elseif ($obj->type == 'yesno')
                 {
-                    print $form->selectyesno('constvalue'.(empty($strictw3c)?'':'[]'),$obj->value,1);
-                    print '<input type="hidden" name="consttype'.(empty($strictw3c)?'':'[]').'" value="yesno">';
+                	print $form->selectyesno('constvalue'.(empty($strictw3c)?'':'[]'),$obj->value,1);
                 }
-                else
+                elseif (preg_match('/emailtemplate/', $obj->type))
+                {
+                	include_once DOL_DOCUMENT_ROOT.'/core/class/html.formmail.class.php';
+                	$formmail = new FormMail($db);
+
+                	$tmp=explode(':', $obj->type);
+
+                	$nboftemplates = $formmail->fetchAllEMailTemplate($tmp[1], $user, null, -1);	// We set lang=null to get in priority record with no lang
+                	//$arraydefaultmessage = $formmail->getEMailTemplate($db, $tmp[1], $user, null, 0, 1, '');
+                	$arrayofmessagename=array();
+                	if (is_array($formmail->lines_model))
+                	{
+	                	foreach($formmail->lines_model as $modelmail)
+	                	{
+	                		//var_dump($modelmail);
+	                		$moreonlabel='';
+	                		if (! empty($arrayofmessagename[$modelmail->label])) $moreonlabel=' <span class="opacitymedium">('.$langs->trans("SeveralLangugeVariatFound").')</span>';
+	                		$arrayofmessagename[$modelmail->label]=$langs->trans(preg_replace('/\(|\)/','',$modelmail->label)).$moreonlabel;
+	                	}
+                	}
+                	//var_dump($arraydefaultmessage);
+                	//var_dump($arrayofmessagename);
+                	print $form->selectarray('constvalue_'.$obj->name, $arrayofmessagename, $obj->value, 'None', 1, 0, '', 0, 0, 0, '', '', 1);
+                }
+                else	// type = 'string' ou 'chaine'
                 {
                     print '<input type="text" class="flat" size="48" name="constvalue'.(empty($strictw3c)?'':'[]').'" value="'.dol_escape_htmltag($obj->value).'">';
-                    print '<input type="hidden" name="consttype'.(empty($strictw3c)?'':'[]').'" value="chaine">';
                 }
                 print '</td>';
             }
@@ -1311,8 +1538,8 @@ function showModulesExludedForExternal($modules)
 
 			//if (empty($conf->global->$moduleconst)) continue;
 			if (! in_array($modulename,$listofmodules)) continue;
-			//var_dump($modulename.'eee'.$langs->trans('Module'.$module->numero.'Name'));
-				
+			//var_dump($modulename.' - '.$langs->trans('Module'.$module->numero.'Name'));
+
 			if ($i > 0) $text.=', ';
 			else $text.=' ';
 			$i++;
@@ -1343,7 +1570,7 @@ function addDocumentModel($name, $type, $label='', $description='')
     $sql.= ($label?"'".$db->escape($label)."'":'null').", ";
     $sql.= (! empty($description)?"'".$db->escape($description)."'":"null");
     $sql.= ")";
-	
+
     dol_syslog("admin.lib::addDocumentModel", LOG_DEBUG);
 	$resql=$db->query($sql);
 	if ($resql)
@@ -1420,4 +1647,78 @@ function phpinfo_array()
 	}
 	return $info_arr;
 }
+
+/**
+ *  Return array head with list of tabs to view object informations.
+ *
+ *  @return	array   	    		    head array with tabs
+ */
+function company_admin_prepare_head()
+{
+	global $langs, $conf, $user;
+
+	$h = 0;
+	$head = array();
+
+	$head[$h][0] = DOL_URL_ROOT."/admin/company.php";
+	$head[$h][1] = $langs->trans("Company");
+	$head[$h][2] = 'company';
+	$h++;
+
+	$head[$h][0] = DOL_URL_ROOT."/admin/accountant.php";
+	$head[$h][1] = $langs->trans("Accountant");
+	$head[$h][2] = 'accountant';
+	$h++;
+
+	complete_head_from_modules($conf,$langs,null,$head,$h,'company_admin','remove');
+
+	return $head;
+}
+
+/**
+ *  Return array head with list of tabs to view object informations.
+ *
+ *  @return	array   	    		    head array with tabs
+ */
+function email_admin_prepare_head()
+{
+	global $langs, $conf, $user;
+
+	$h = 0;
+	$head = array();
+
+	if ($user->admin && (empty($_SESSION['leftmenu']) || $_SESSION['leftmenu'] != 'email_templates'))
+	{
+		$head[$h][0] = DOL_URL_ROOT."/admin/mails.php";
+		$head[$h][1] = $langs->trans("OutGoingEmailSetup");
+		$head[$h][2] = 'common';
+		$h++;
+
+		if ($conf->mailing->enabled)
+		{
+			$head[$h][0] = DOL_URL_ROOT."/admin/mails_emailing.php";
+			$head[$h][1] = $langs->trans("OutGoingEmailSetupForEmailing");
+			$head[$h][2] = 'common_emailing';
+			$h++;
+		}
+	}
+
+	$head[$h][0] = DOL_URL_ROOT."/admin/mails_templates.php";
+	$head[$h][1] = $langs->trans("DictionaryEMailTemplates");
+	$head[$h][2] = 'templates';
+	$h++;
+
+	if ($conf->global->MAIN_FEATURES_LEVEL >= 1)
+	{
+		$head[$h][0] = DOL_URL_ROOT."/admin/mails_senderprofile_list.php";
+		$head[$h][1] = $langs->trans("EmailSenderProfiles");
+		$head[$h][2] = 'senderprofiles';
+		$h++;
+	}
+
+	complete_head_from_modules($conf,$langs,null,$head,$h,'email_admin','remove');
+
+	return $head;
+}
+
 

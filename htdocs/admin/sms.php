@@ -25,12 +25,8 @@
 require '../main.inc.php';
 require_once DOL_DOCUMENT_ROOT.'/core/lib/admin.lib.php';
 
-$langs->load("companies");
-$langs->load("products");
-$langs->load("admin");
-$langs->load("sms");
-$langs->load("other");
-$langs->load("errors");
+// Load traductions files requiredby by page
+$langs->loadLangs(array("companies","admin","products","sms","other","errors"));
 
 if (!$user->admin)
 accessforbidden();
@@ -43,7 +39,7 @@ $substitutionarrayfortest=array(
 '__FIRSTNAME__' => 'TESTFirstname'
 );
 
-$action=GETPOST('action');
+$action=GETPOST('action','aZ09');
 
 
 /*
@@ -169,37 +165,32 @@ if ($action == 'edit')
 	print '<input type="hidden" name="action" value="update">';
 
 	clearstatcache();
-	$var=true;
 
 	print '<table class="noborder" width="100%">';
 	print '<tr class="liste_titre"><td>'.$langs->trans("Parameter").'</td><td>'.$langs->trans("Value").'</td></tr>';
 
-	// Disable
-	$var=!$var;
-	print '<tr '.$bc[$var].'><td>'.$langs->trans("MAIN_DISABLE_ALL_SMS").'</td><td>';
+	// Disable	
+	print '<tr class="oddeven"><td>'.$langs->trans("MAIN_DISABLE_ALL_SMS").'</td><td>';
 	print $form->selectyesno('MAIN_DISABLE_ALL_SMS',$conf->global->MAIN_DISABLE_ALL_SMS,1);
 	print '</td></tr>';
 
-	// Separator
-	$var=!$var;
-	print '<tr '.$bc[$var].'><td colspan="2">&nbsp;</td></tr>';
+	// Separator	
+	print '<tr class="oddeven"><td colspan="2">&nbsp;</td></tr>';
 
-	// Method
-	$var=!$var;
-	print '<tr '.$bc[$var].'><td>'.$langs->trans("MAIN_SMS_SENDMODE").'</td><td>';
+	// Method	
+	print '<tr class="oddeven"><td>'.$langs->trans("MAIN_SMS_SENDMODE").'</td><td>';
 	if (count($listofmethods)) print $form->selectarray('MAIN_SMS_SENDMODE',$listofmethods,$conf->global->MAIN_SMS_SENDMODE,1);
 	else print '<font class="error">'.$langs->trans("None").'</font>';
     print '</td></tr>';
 
-	// From
-	$var=!$var;
-	print '<tr '.$bc[$var].'><td>'.$langs->trans("MAIN_MAIL_SMS_FROM",$langs->transnoentities("Undefined")).'</td>';
+	// From	
+	print '<tr class="oddeven"><td>'.$langs->trans("MAIN_MAIL_SMS_FROM",$langs->transnoentities("Undefined")).'</td>';
 	print '<td><input class="flat" name="MAIN_MAIL_SMS_FROM" size="32" value="' . $conf->global->MAIN_MAIL_SMS_FROM;
 	print '"></td></tr>';
 
 	// Autocopy to
-	/*$var=!$var;
-	print '<tr '.$bc[$var].'><td>'.$langs->trans("MAIN_MAIL_AUTOCOPY_TO").'</td>';
+	/*
+	print '<tr class="oddeven"><td>'.$langs->trans("MAIN_MAIL_AUTOCOPY_TO").'</td>';
 	print '<td><input class="flat" name="MAIN_MAIL_AUTOCOPY_TO" size="32" value="' . $conf->global->MAIN_MAIL_AUTOCOPY_TO;
 	print '"></td></tr>';
 	*/
@@ -216,39 +207,34 @@ if ($action == 'edit')
 }
 else
 {
-	$var=true;
 
 	if (! count($listofmethods)) print '<div class="warning">'.$langs->trans("NoSmsEngine",'<a target="_blank" href="http://www.dolistore.com/search.php?orderby=position&orderway=desc&search_query=smsmanager">DoliStore</a>').'</div>';
 
 	print '<table class="noborder" width="100%">';
 	print '<tr class="liste_titre"><td>'.$langs->trans("Parameter").'</td><td>'.$langs->trans("Value").'</td></tr>';
 
-	// Disable
-	$var=!$var;
-	print '<tr '.$bc[$var].'><td>'.$langs->trans("MAIN_DISABLE_ALL_SMS").'</td><td>'.yn($conf->global->MAIN_DISABLE_ALL_SMS).'</td></tr>';
+	// Disable	
+	print '<tr class="oddeven"><td>'.$langs->trans("MAIN_DISABLE_ALL_SMS").'</td><td>'.yn($conf->global->MAIN_DISABLE_ALL_SMS).'</td></tr>';
 
-	// Separator
-	$var=!$var;
-	print '<tr '.$bc[$var].'><td colspan="2">&nbsp;</td></tr>';
+	// Separator	
+	print '<tr class="oddeven"><td colspan="2">&nbsp;</td></tr>';
 
-	// Method
-	$var=!$var;
-	print '<tr '.$bc[$var].'><td>'.$langs->trans("MAIN_SMS_SENDMODE").'</td><td>';
+	// Method	
+	print '<tr class="oddeven"><td>'.$langs->trans("MAIN_SMS_SENDMODE").'</td><td>';
 	$text=$listofmethods[$conf->global->MAIN_SMS_SENDMODE];
 	if (empty($text)) $text=$langs->trans("Undefined").' '.img_warning();
 	print $text;
 	print '</td></tr>';
 
-	// From
-	$var=!$var;
-	print '<tr '.$bc[$var].'><td>'.$langs->trans("MAIN_MAIL_SMS_FROM",$langs->transnoentities("Undefined")).'</td>';
+	// From	
+	print '<tr class="oddeven"><td>'.$langs->trans("MAIN_MAIL_SMS_FROM",$langs->transnoentities("Undefined")).'</td>';
 	print '<td>'.$conf->global->MAIN_MAIL_SMS_FROM;
 	if (!empty($conf->global->MAIN_MAIL_SMS_FROM) && ! isValidPhone($conf->global->MAIN_MAIL_SMS_FROM)) print ' '.img_warning($langs->trans("ErrorBadPhone"));
 	print '</td></tr>';
 
 	// Autocopy to
-	/*$var=!$var;
-	print '<tr '.$bc[$var].'><td>'.$langs->trans("MAIN_MAIL_AUTOCOPY_TO").'</td>';
+	/*
+	print '<tr class="oddeven"><td>'.$langs->trans("MAIN_MAIL_AUTOCOPY_TO").'</td>';
 	print '<td>'.$conf->global->MAIN_MAIL_AUTOCOPY_TO;
 	if (!empty($conf->global->MAIN_MAIL_AUTOCOPY_TO) && ! isValidEmail($conf->global->MAIN_MAIL_AUTOCOPY_TO)) print img_warning($langs->trans("ErrorBadEMail"));
 	print '</td></tr>';

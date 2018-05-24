@@ -1,5 +1,5 @@
 <?php
-/* Copyright (C) 2005-2009 Laurent Destailleur  <eldy@users.sourceforge.net>
+/* Copyright (C) 2005-2017 Laurent Destailleur  <eldy@users.sourceforge.net>
  * Copyright (C) 2015      Frederic France      <frederic.france@free.fr>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -39,6 +39,21 @@ class box_bookmarks extends ModeleBoxes
 	var $info_box_head = array();
 	var $info_box_contents = array();
 
+
+	/**
+	 *  Constructor
+	 *
+	 *  @param  DoliDB  $db         Database handler
+	 *  @param  string  $param      More parameters
+	 */
+	function __construct($db,$param)
+	{
+	    global $user;
+
+	    $this->db=$db;
+
+	    $this->hidden=! ($user->rights->bookmark->lire);
+	}
 
 	/**
      *  Load data for box to show them later
@@ -124,8 +139,8 @@ class box_bookmarks extends ModeleBoxes
             }
         } else {
             $this->info_box_contents[0][0] = array(
-                'align' => 'left',
-                'text' => $langs->trans("ReadPermissionNotAllowed"),
+                'td' => 'align="left" class="nohover opacitymedium"',
+                'text' => $langs->trans("ReadPermissionNotAllowed")
             );
         }
     }
@@ -136,11 +151,11 @@ class box_bookmarks extends ModeleBoxes
 	 *	@param	array	$head       Array with properties of box title
 	 *	@param  array	$contents   Array with properties of box lines
 	 *  @param	int		$nooutput	No print, only return string
-	 *	@return	void
+	 *	@return	string
 	 */
     function showBox($head = null, $contents = null, $nooutput=0)
     {
-		parent::showBox($this->info_box_head, $this->info_box_contents, $nooutput);
+		return parent::showBox($this->info_box_head, $this->info_box_contents, $nooutput);
 	}
 
 }

@@ -32,9 +32,9 @@ require_once DOL_DOCUMENT_ROOT.'/core/lib/usergroups.lib.php';
 require_once DOL_DOCUMENT_ROOT.'/core/lib/admin.lib.php';
 require_once DOL_DOCUMENT_ROOT.'/core/class/extrafields.class.php';
 
-$langs->load("admin");
-$langs->load("members");
-$langs->load("users");
+// Load traductions files requiredby by page
+$langs->loadLangs(array("admin", "members", "users"));
+
 if (! $user->admin) accessforbidden();
 
 $extrafields = new ExtraFields($db);
@@ -47,37 +47,9 @@ $type='group';
  * Action
  */
 
-// Activate a model
+include DOL_DOCUMENT_ROOT.'/core/actions_setmoduleoptions.inc.php';
 
-// Define constants for submodules that contains parameters (forms with param1, param2, ... and value1, value2, ...)
-if ($action == 'setModuleOptions')
-{
-	$post_size=count($_POST);
-
-	$db->begin();
-
-	for($i=0;$i < $post_size;$i++)
-    {
-    	if (array_key_exists('param'.$i,$_POST))
-    	{
-    		$param=GETPOST("param".$i,'alpha');
-    		$value=GETPOST("value".$i,'alpha');
-    		if ($param) $res = dolibarr_set_const($db,$param,$value,'chaine',0,'',$conf->entity);
-	    	if (! $res > 0) $error++;
-    	}
-    }
-	if (! $error)
-    {
-        $db->commit();
-	    setEventMessages($langs->trans("SetupSaved"), null, 'mesgs');
-    }
-    else
-    {
-        $db->rollback();
-	    setEventMessages($langs->trans("Error"), null, 'errors');
-	}
-}
-elseif ($action == 'set_default')
+if ($action == 'set_default')
 {
 	$ret = addDocumentModel($value, $type, $label, $scandir);
 	$res = true;
@@ -111,7 +83,7 @@ elseif ($action == 'setdoc')
 	}
 	$res = true;
 }
-elseif (preg_match('/set_(.*)/',$action,$reg))
+elseif (preg_match('/set_([a-z0-9_\-]+)/i',$action,$reg))
 {
     $code=$reg[1];
     if (dolibarr_set_const($db, $code, 1, 'chaine', 0, '', $conf->entity) > 0)
@@ -125,7 +97,7 @@ elseif (preg_match('/set_(.*)/',$action,$reg))
     }
 }
 
-elseif (preg_match('/del_(.*)/',$action,$reg))
+elseif (preg_match('/del_([a-z0-9_\-]+)/i',$action,$reg))
 {
     $code=$reg[1];
     if (dolibarr_del_const($db, $code, $conf->entity) > 0)
@@ -145,13 +117,13 @@ elseif (preg_match('/del_(.*)/',$action,$reg))
 $help_url='EN:Module_Users|FR:Module_Utilisateurs|ES:M&oacute;dulo_Usuarios';
 llxHeader('',$langs->trans("UsersSetup"),$help_url);
 
-$linkback='<a href="'.DOL_URL_ROOT.'/admin/modules.php">'.$langs->trans("BackToModuleList").'</a>';
+$linkback='<a href="'.DOL_URL_ROOT.'/admin/modules.php?restore_lastsearch_values=1">'.$langs->trans("BackToModuleList").'</a>';
 print load_fiche_titre($langs->trans("UsersSetup"),$linkback,'title_setup');
 
 
 $head=user_admin_prepare_head();
 
-dol_fiche_head($head,'usergroupcard', $langs->trans("MenuUsersAndGroups"), 0, 'user');
+dol_fiche_head($head,'usergroupcard', $langs->trans("MenuUsersAndGroups"), -1, 'user');
 
 
 $dirmodels=array_merge(array('/'),(array) $conf->modules_parts['models']);
@@ -193,7 +165,6 @@ print "</tr>\n";
 
 clearstatcache();
 
-$var=true;
 foreach ($dirmodels as $reldir)
 {
     foreach (array('','/doc') as $valdir)
@@ -230,8 +201,7 @@ foreach ($dirmodels as $reldir)
 
 	                        if ($modulequalified)
 	                        {
-	                            $var = !$var;
-	                            print '<tr '.$bc[$var].'><td width="100">';
+	                            print '<tr class="oddeven"><td width="100">';
 	                            print (empty($module->name)?$name:$module->name);
 	                            print "</td><td>\n";
 	                            if (method_exists($module,'info')) print $module->info($langs);

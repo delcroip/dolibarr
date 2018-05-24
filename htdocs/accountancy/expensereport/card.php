@@ -23,21 +23,20 @@
  */
 /**
  * \file		htdocs/accountancy/supplier/card.php
- * \ingroup		Accountancy
+ * \ingroup		Advanced accountancy
  * \brief		Card expense report ventilation
  */
 require '../../main.inc.php';
 
-// Class
 require_once DOL_DOCUMENT_ROOT . '/expensereport/class/expensereport.class.php';
-require_once DOL_DOCUMENT_ROOT . '/accountancy/class/html.formventilation.class.php';
+require_once DOL_DOCUMENT_ROOT . '/core/class/html.formaccounting.class.php';
 
-// Langs
-$langs->load("bills");
-$langs->load("accountancy");
-$langs->load("trips");
+$langs->loadLangs(array("bills","accountancy","trips"));
 
 $action = GETPOST('action', 'alpha');
+$cancel = GETPOST('cancel', 'alpha');
+$backtopage = GETPOST('backtopage', 'alpha');
+
 $codeventil = GETPOST('codeventil');
 $id = GETPOST('id');
 
@@ -45,18 +44,21 @@ $id = GETPOST('id');
 if ($user->societe_id > 0)
 	accessforbidden();
 
+
 /*
  * Actions
  */
 
-if ($action == 'ventil' && $user->rights->accounting->bind->write) {
-	if (! GETPOST('cancel', 'alpha')) {
+if ($action == 'ventil' && $user->rights->accounting->bind->write)
+{
+	if (! $cancel)
+	{
 		if ($codeventil < 0) $codeventil = 0;
 
 		$sql = " UPDATE " . MAIN_DB_PREFIX . "expensereport_det";
 		$sql .= " SET fk_code_ventilation = " . $codeventil;
 		$sql .= " WHERE rowid = " . $id;
-		
+
 		$resql = $db->query($sql);
 		if (! $resql) {
 			setEventMessages($db->lasterror(), null, 'errors');
@@ -64,6 +66,11 @@ if ($action == 'ventil' && $user->rights->accounting->bind->write) {
 		else
 		{
 			setEventMessages($langs->trans("RecordModifiedSuccessfully"), null, 'mesgs');
+			if ($backtopage)
+			{
+				header("Location: ".$backtopage);
+				exit();
+			}
 		}
 	} else {
 		header("Location: ./lines.php");
@@ -85,7 +92,7 @@ if ($cancel == $langs->trans("Cancel")) {
 // Create
 $form = new Form($db);
 $expensereport_static = new ExpenseReport($db);
-$formventilation = new FormVentilation($db);
+$formaccounting = new FormAccounting($db);
 
 if (! empty($id)) {
 	$sql = "SELECT er.ref, er.rowid as facid, erd.fk_c_type_fees, erd.comments, erd.rowid, erd.fk_code_ventilation,";
@@ -96,7 +103,7 @@ if (! empty($id)) {
 	$sql .= " LEFT JOIN " . MAIN_DB_PREFIX . "accounting_account as aa ON erd.fk_code_ventilation = aa.rowid";
 	$sql .= " INNER JOIN " . MAIN_DB_PREFIX . "expensereport as er ON er.rowid = erd.fk_expensereport";
 	$sql .= " WHERE er.fk_statut > 0 AND erd.rowid = " . $id;
-	$sql .= " AND er.entity IN (" . getEntity("expensereport", 0) . ")";     // We don't share object for accountancy
+	$sql .= " AND er.entity IN (" . getEntity('expensereport', 0) . ")";     // We don't share object for accountancy
 
 	dol_syslog("/accounting/expensereport/card.php sql=" . $sql, LOG_DEBUG);
 	$result = $db->query($sql);
@@ -111,6 +118,7 @@ if (! empty($id)) {
 			print '<form action="' . $_SERVER["PHP_SELF"] . '?id=' . $id . '" method="post">' . "\n";
 			print '<input type="hidden" name="token" value="' . $_SESSION['newtoken'] . '">';
 			print '<input type="hidden" name="action" value="ventil">';
+			print '<input type="hidden" name="backtopage" value="'.dol_escape_htmltag($backtopage).'">';
 
 			print load_fiche_titre($langs->trans('ExpenseReportsVentilation'), '', 'title_setup');
 
@@ -135,7 +143,7 @@ if (! empty($id)) {
 			print '<td>' . ($langs->trans($objp->type_fees_code) == $objp->type_fees_code ? $objp->type_fees_label : $langs->trans(($objp->type_fees_code))) . '</td>';
 
 			print '<tr><td>' . $langs->trans("Account") . '</td><td>';
-			print $formventilation->select_account($objp->fk_code_ventilation, 'codeventil', 1);
+			print $formaccounting->select_account($objp->fk_code_ventilation, 'codeventil', 1);
 			print '</td></tr>';
 			print '</table>';
 

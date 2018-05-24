@@ -135,11 +135,9 @@ if (GETPOST('save','alpha'))
 
 llxHeader();
 
-$linkback='<a href="'.DOL_URL_ROOT.'/admin/modules.php">'.$langs->trans("BackToModuleList").'</a>';
+$linkback='<a href="'.DOL_URL_ROOT.'/admin/modules.php?restore_lastsearch_values=1">'.$langs->trans("BackToModuleList").'</a>';
 print load_fiche_titre($langs->trans("AdvancedEditor"),$linkback,'title_setup');
 print '<br>';
-
-$var=true;
 
 if (empty($conf->use_javascript_ajax))
 {
@@ -158,9 +156,8 @@ else
     {
         // Si condition non remplie, on ne propose pas l'option
         if (! $conditions[$const]) continue;
-
-        $var=!$var;
-        print "<tr ".$bc[$var].">";
+        
+        print '<tr class="oddeven">';
         print '<td width="16">'.img_object("",$picto[$const]).'</td>';
         print '<td>'.$langs->trans($desc).'</td>';
         print '<td align="center" width="100">';

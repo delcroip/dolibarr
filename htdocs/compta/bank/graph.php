@@ -92,7 +92,7 @@ else
 	$sql.= " FROM ".MAIN_DB_PREFIX."bank as b";
 	$sql.= ", ".MAIN_DB_PREFIX."bank_account as ba";
 	$sql.= " WHERE b.fk_account = ba.rowid";
-	$sql.= " AND ba.entity IN (".getEntity('bank_account', 1).")";
+	$sql.= " AND ba.entity IN (".getEntity('bank_account').")";
 	if ($account && $_GET["option"]!='all') $sql.= " AND b.fk_account IN (".$account.")";
 
 	$resql = $db->query($sql);
@@ -108,7 +108,7 @@ else
 		dol_print_error($db);
 	}
 	if (empty($min)) $min = dol_now - 3600 * 24;
-	
+
 	$log="graph.php: min=".$min." max=".$max;
 	dol_syslog($log);
 
@@ -133,7 +133,7 @@ else
 		$sql.= " FROM ".MAIN_DB_PREFIX."bank as b";
 		$sql.= ", ".MAIN_DB_PREFIX."bank_account as ba";
 		$sql.= " WHERE b.fk_account = ba.rowid";
-		$sql.= " AND ba.entity IN (".getEntity('bank_account', 1).")";
+		$sql.= " AND ba.entity IN (".getEntity('bank_account').")";
 		$sql.= " AND b.datev >= '".$year."-".$month."-01 00:00:00'";
 		$sql.= " AND b.datev < '".$yearnext."-".$monthnext."-01 00:00:00'";
 		if ($account && $_GET["option"]!='all') $sql.= " AND b.fk_account IN (".$account.")";
@@ -164,7 +164,7 @@ else
 		$sql.= " FROM ".MAIN_DB_PREFIX."bank as b";
 		$sql.= ", ".MAIN_DB_PREFIX."bank_account as ba";
 		$sql.= " WHERE b.fk_account = ba.rowid";
-		$sql.= " AND ba.entity IN (".getEntity('bank_account', 1).")";
+		$sql.= " AND ba.entity IN (".getEntity('bank_account').")";
 		$sql.= " AND b.datev < '".$year."-".sprintf("%02s",$month)."-01'";
 		if ($account && $_GET["option"]!='all') $sql.= " AND b.fk_account IN (".$account.")";
 
@@ -276,7 +276,7 @@ else
 		$sql.= " FROM ".MAIN_DB_PREFIX."bank as b";
 		$sql.= ", ".MAIN_DB_PREFIX."bank_account as ba";
 		$sql.= " WHERE b.fk_account = ba.rowid";
-		$sql.= " AND ba.entity IN (".getEntity('bank_account', 1).")";
+		$sql.= " AND ba.entity IN (".getEntity('bank_account').")";
 		$sql.= " AND b.datev >= '".$year."-01-01 00:00:00'";
 		$sql.= " AND b.datev <= '".$year."-12-31 23:59:59'";
 		if ($account && $_GET["option"]!='all') $sql.= " AND b.fk_account IN (".$account.")";
@@ -307,7 +307,7 @@ else
 		$sql.= " FROM ".MAIN_DB_PREFIX."bank as b";
 		$sql.= ", ".MAIN_DB_PREFIX."bank_account as ba";
 		$sql.= " WHERE b.fk_account = ba.rowid";
-		$sql.= " AND ba.entity IN (".getEntity('bank_account', 1).")";
+		$sql.= " AND ba.entity IN (".getEntity('bank_account').")";
 		$sql.= " AND b.datev < '".$year."-01-01'";
 		if ($account && $_GET["option"]!='all') $sql.= " AND b.fk_account IN (".$account.")";
 
@@ -415,7 +415,7 @@ else
 		$sql.= " FROM ".MAIN_DB_PREFIX."bank as b";
 		$sql.= ", ".MAIN_DB_PREFIX."bank_account as ba";
 		$sql.= " WHERE b.fk_account = ba.rowid";
-		$sql.= " AND ba.entity IN (".getEntity('bank_account', 1).")";
+		$sql.= " AND ba.entity IN (".getEntity('bank_account').")";
 		if ($account && $_GET["option"]!='all') $sql.= " AND b.fk_account IN (".$account.")";
 		$sql.= " GROUP BY date_format(b.datev,'%Y%m%d')";
 
@@ -538,7 +538,7 @@ else
 		$sql .= " FROM ".MAIN_DB_PREFIX."bank as b";
 		$sql.= ", ".MAIN_DB_PREFIX."bank_account as ba";
 		$sql.= " WHERE b.fk_account = ba.rowid";
-		$sql.= " AND ba.entity IN (".getEntity('bank_account', 1).")";
+		$sql.= " AND ba.entity IN (".getEntity('bank_account').")";
 		$sql.= " AND b.datev >= '".$year."-".$month."-01 00:00:00'";
 		$sql.= " AND b.datev < '".$yearnext."-".$monthnext."-01 00:00:00'";
 		$sql.= " AND b.amount > 0";
@@ -576,7 +576,7 @@ else
 		$sql .= " FROM ".MAIN_DB_PREFIX."bank as b";
 		$sql.= ", ".MAIN_DB_PREFIX."bank_account as ba";
 		$sql.= " WHERE b.fk_account = ba.rowid";
-		$sql.= " AND ba.entity IN (".getEntity('bank_account', 1).")";
+		$sql.= " AND ba.entity IN (".getEntity('bank_account').")";
 		$sql.= " AND b.datev >= '".$year."-".$month."-01 00:00:00'";
 		$sql.= " AND b.datev < '".$yearnext."-".$monthnext."-01 00:00:00'";
 		$sql.= " AND b.amount < 0";
@@ -656,7 +656,7 @@ else
 		$sql.= " FROM ".MAIN_DB_PREFIX."bank as b";
 		$sql.= ", ".MAIN_DB_PREFIX."bank_account as ba";
 		$sql.= " WHERE b.fk_account = ba.rowid";
-		$sql.= " AND ba.entity IN (".getEntity('bank_account', 1).")";
+		$sql.= " AND ba.entity IN (".getEntity('bank_account').")";
 		$sql.= " AND b.datev >= '".$year."-01-01 00:00:00'";
 		$sql.= " AND b.datev <= '".$year."-12-31 23:59:59'";
 		$sql.= " AND b.amount > 0";
@@ -685,7 +685,7 @@ else
 		$sql.= " FROM ".MAIN_DB_PREFIX."bank as b";
 		$sql.= ", ".MAIN_DB_PREFIX."bank_account as ba";
 		$sql.= " WHERE b.fk_account = ba.rowid";
-		$sql.= " AND ba.entity IN (".getEntity('bank_account', 1).")";
+		$sql.= " AND ba.entity IN (".getEntity('bank_account').")";
 		$sql.= " AND b.datev >= '".$year."-01-01 00:00:00'";
 		$sql.= " AND b.datev <= '".$year."-12-31 23:59:59'";
 		$sql.= " AND b.amount < 0";
@@ -760,7 +760,7 @@ $head=bank_prepare_head($object);
 dol_fiche_head($head,'graph',$langs->trans("FinancialAccount"),0,'account');
 
 
-$linkback = '<a href="'.DOL_URL_ROOT.'/compta/bank/index.php">'.$langs->trans("BackToList").'</a>';
+$linkback = '<a href="'.DOL_URL_ROOT.'/compta/bank/list.php?restore_lastsearch_values=1">'.$langs->trans("BackToList").'</a>';
 
 if ($account)
 {

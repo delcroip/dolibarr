@@ -28,8 +28,6 @@
  * 				write = system,call,log,verbose,command,agent,user
  */
 
-//if (! defined('NOREQUIREUSER')) define('NOREQUIREUSER','1');
-//if (! defined('NOREQUIREDB'))   define('NOREQUIREDB','1');
 if (! defined('NOREQUIRESOC'))    define('NOREQUIRESOC','1');
 if (! defined('NOREQUIRETRAN'))   define('NOREQUIRETRAN','1');
 if (! defined('NOCSRFCHECK'))     define('NOCSRFCHECK','1');
@@ -117,7 +115,7 @@ llxHeader();
 
 $sql = "SELECT s.nom as name FROM ".MAIN_DB_PREFIX."societe as s";
 $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."socpeople as sp ON sp.fk_soc = s.rowid";
-$sql.= " WHERE s.entity IN (".getEntity('societe', 1).")";
+$sql.= " WHERE s.entity IN (".getEntity('societe').")";
 $sql.= " AND (s.phone='".$db->escape($called)."'";
 $sql.= " OR sp.phone='".$db->escape($called)."'";
 $sql.= " OR sp.phone_perso='".$db->escape($called)."'";

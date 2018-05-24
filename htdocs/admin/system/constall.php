@@ -140,7 +140,7 @@ $configfilelib=array(
 					'Limit nb of email sent by page',
 					'Strict mode is on/off'
 					);
-$var=true;
+
 print '<table class="noborder" width="100%">';
 print '<tr class="liste_titre"><td width="280">'.$langs->trans("Label").'</td>';
 print '<td>'.$langs->trans("Parameter").'</td>';
@@ -170,8 +170,7 @@ foreach($configfileparameters as $key)
             continue;
         }
 
-		$var=!$var;
-		print "<tr ".$bc[$var].">";
+		print '<tr class="oddeven">';
 		if ($newkey == 'separator')
 		{
 			print '<td colspan="3">&nbsp;</td>';
@@ -187,7 +186,7 @@ foreach($configfileparameters as $key)
 			if ($newkey == 'dolibarr_main_db_pass') print preg_replace('/./i','*',${$newkey});
 			else if ($newkey == 'dolibarr_main_url_root' && preg_match('/__auto__/',${$newkey})) print ${$newkey}.' => '.constant('DOL_MAIN_URL_ROOT');
 			else print ${$newkey};
-			if ($newkey == 'dolibarr_main_url_root' && $newkey != DOL_MAIN_URL_ROOT) print ' (currently overwritten by autodetected value: '.DOL_MAIN_URL_ROOT.')';
+			if ($newkey == 'dolibarr_main_url_root' && ${$newkey} != DOL_MAIN_URL_ROOT) print ' (currently overwritten by autodetected value: '.DOL_MAIN_URL_ROOT.')';
 			print "</td>";
 		}
 		print "</tr>\n";
@@ -233,14 +232,12 @@ if ($resql)
 {
 	$num = $db->num_rows($resql);
 	$i = 0;
-	$var=True;
 
 	while ($i < $num)
     {
     	$obj = $db->fetch_object($resql);
-    	$var=!$var;
 
-    	print '<tr '.$bc[$var].'>';
+    	print '<tr class="oddeven">';
     	print '<td>'.$obj->name.'</td>'."\n";
     	print '<td>'.$obj->value.'</td>'."\n";
     	if (empty($conf->multicompany->enabled) || !$user->entity) print '<td>'.$obj->entity.'</td>'."\n";	// If superadmin or multicompany disabled

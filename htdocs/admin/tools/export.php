@@ -41,7 +41,7 @@ $page = GETPOST("page",'int');
 if (! $sortorder) $sortorder="DESC";
 if (! $sortfield) $sortfield="date";
 if ($page < 0) { $page = 0; }
-$limit = GETPOST('limit')?GETPOST('limit','int'):$conf->liste_limit;
+$limit = GETPOST('limit','int')?GETPOST('limit','int'):$conf->liste_limit;
 $offset = $limit * $page;
 
 if (! $user->admin) accessforbidden();
@@ -88,6 +88,7 @@ if (!empty($ExecTimeLimit))
     @set_time_limit($ExecTimeLimit);   // Need more than 240 on Windows 7/64
     error_reporting($err);
 }
+$MemoryLimit=0;
 if (!empty($MemoryLimit))
 {
     @ini_set('memory_limit', $MemoryLimit);
@@ -120,10 +121,10 @@ $utils = new Utils($db);
 // MYSQL
 if ($what == 'mysql')
 {
-    
+
     $cmddump=GETPOST("mysqldump");	// Do not sanitize here with 'alpha', will be sanitize later by dol_sanitizePathName and escapeshellarg
     $cmddump=dol_sanitizePathName($cmddump);
-    
+
     if (! empty($dolibarr_main_restrict_os_commands))
     {
         $arrayofallowedcommand=explode(',', $dolibarr_main_restrict_os_commands);
@@ -142,13 +143,13 @@ if ($what == 'mysql')
             $errormsg=$langs->trans('CommandIsNotInsideAllowedCommands');
         }
     }
-    
+
     if (! $errormsg && $cmddump)
     {
         dolibarr_set_const($db, 'SYSTEMTOOLS_MYSQLDUMP', $cmddump,'chaine',0,'',$conf->entity);
     }
 
-    if (! $errormsg) 
+    if (! $errormsg)
     {
         $utils->dumpDatabase(GETPOST('compression','alpha'), $what, 0, $file);
         $errormsg=$utils->error;
@@ -172,13 +173,13 @@ if ($what == 'postgresql')
 {
     $cmddump=GETPOST("postgresqldump");	// Do not sanitize here with 'alpha', will be sanitize later by dol_sanitizePathName and escapeshellarg
     $cmddump=dol_sanitizePathName($cmddump);
-    
+
     if (! $errormsg && $cmddump)
     {
         dolibarr_set_const($db, 'SYSTEMTOOLS_POSTGRESQLDUMP', $cmddump,'chaine',0,'',$conf->entity);
     }
 
-    if (! $errormsg) 
+    if (! $errormsg)
     {
         $utils->dumpDatabase(GETPOST('compression','alpha'), $what, 0, $file);
         $errormsg=$utils->error;
@@ -213,10 +214,10 @@ else
 
         $_SESSION["commandbackupresult"]=$resultstring;
 	}
-	else
+	/*else
 	{
-		setEventMessages($langs->trans("YouMustRunCommandFromCommandLineAfterLoginToUser",$dolibarr_main_db_user,$dolibarr_main_db_user), null, 'mesgs');
-	}
+		setEventMessages($langs->trans("YouMustRunCommandFromCommandLineAfterLoginToUser",$dolibarr_main_db_user,$dolibarr_main_db_user), null, 'warnings');
+	}*/
 }
 
 
@@ -253,7 +254,7 @@ function backup_tables($outputfile, $tables='*')
     global $errormsg;
 
     // Set to UTF-8
-	if(is_a($db, 'DoliDBMysqli')) {
+	if (is_a($db, 'DoliDBMysqli')) {
 		/** @var DoliDBMysqli $db */
 		$db->db->set_charset('utf8');
 	} else {
@@ -279,7 +280,7 @@ function backup_tables($outputfile, $tables='*')
 
     //cycle through
     $handle = fopen($outputfile, 'w+');
-    if (fwrite($handle, '') === FALSE)
+    if (fwrite($handle, '') === false)
     {
         $langs->load("errors");
         dol_syslog("Failed to open file ".$outputfile,LOG_ERR);
@@ -299,11 +300,17 @@ function backup_tables($outputfile, $tables='*')
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
 /*!40101 SET NAMES utf8 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 ";
 
     if (GETPOST("nobin_disable_fk")) $sqlhead .= "SET FOREIGN_KEY_CHECKS=0;\n";
-    $sqlhead .= "SET SQL_MODE=\"NO_AUTO_VALUE_ON_ZERO\";\n";
+    //$sqlhead .= "SET SQL_MODE=\"NO_AUTO_VALUE_ON_ZERO\";\n";
     if (GETPOST("nobin_use_transaction")) $sqlhead .= "SET AUTOCOMMIT=0;\nSTART TRANSACTION;\n";
 
     fwrite($handle, $sqlhead);
@@ -320,8 +327,8 @@ function backup_tables($outputfile, $tables='*')
         fwrite($handle, "\n--\n-- Table structure for table `".$table."`\n--\n");
 
         if (GETPOST("nobin_drop")) fwrite($handle,"DROP TABLE IF EXISTS `".$table."`;\n"); // Dropping table if exists prior to re create it
-        //fwrite($handle,"/*!40101 SET @saved_cs_client     = @@character_set_client */;\n");
-        //fwrite($handle,"/*!40101 SET character_set_client = utf8 */;\n");
+        fwrite($handle,"/*!40101 SET @saved_cs_client     = @@character_set_client */;\n");
+        fwrite($handle,"/*!40101 SET character_set_client = utf8 */;\n");
         $resqldrop=$db->query('SHOW CREATE TABLE '.$table);
         $row2 = $db->fetch_row($resqldrop);
         if (empty($row2[1]))
@@ -337,6 +344,7 @@ function backup_tables($outputfile, $tables='*')
 	        fwrite($handle, "\n--\n-- Dumping data for table `".$table."`\n--\n");
 	        if (!GETPOST("nobin_nolocks")) fwrite($handle, "LOCK TABLES `".$table."` WRITE;\n"); // Lock the table before inserting data (when the data will be imported back)
 	        if (GETPOST("nobin_disable_fk")) fwrite($handle, "ALTER TABLE `".$table."` DISABLE KEYS;\n");
+	        else fwrite($handle, "/*!40000 ALTER TABLE `".$table."` DISABLE KEYS */;\n");
 
 	        $sql='SELECT * FROM '.$table;
 	        $result = $db->query($sql);

@@ -55,6 +55,7 @@ $idline = GETPOST('idline');
 $sortfield = GETPOST('sortfield','alpha');
 $sortorder = GETPOST('sortorder','alpha');
 $page = GETPOST('page','int');
+if (empty($page) || $page == -1) { $page = 0; }     // If $page is not defined, or '' or -1
 
 if (!$sortfield) {
     $sortfield = 'p.ref';
@@ -63,7 +64,7 @@ if (!$sortfield) {
 if (!$sortorder) {
     $sortorder = 'ASC';
 }
-$limit = GETPOST('limit')?GETPOST('limit','int'):$conf->liste_limit;
+$limit = GETPOST('limit','int')?GETPOST('limit','int'):$conf->liste_limit;
 $offset = $limit * $page ;
 
 $listofdata=array();
@@ -113,7 +114,8 @@ if ($action == 'addline')
 			if (empty($batch))
 			{
 				$error++;
-				setEventMessages($langs->trans("ErrorTryToMakeMoveOnProductRequiringBatchData"), null, 'errors');
+				$langs->load("errors");
+				setEventMessages($langs->trans("ErrorTryToMakeMoveOnProductRequiringBatchData", $producttmp->ref), null, 'errors');
 			}
 		}
 	}
@@ -328,10 +330,10 @@ llxHeader('', $title);
 print load_fiche_titre($langs->trans("MassStockTransferShort"));
 
 $titletoadd=$langs->trans("Select");
-$titletoaddnoent=$langs->transnoentitiesnoconv("Select");
 $buttonrecord=$langs->trans("RecordMovement");
-$buttonrecordnoent=$langs->trans("RecordMovement");
-print $langs->trans("SelectProductInAndOutWareHouse",$titletoaddnoent,$buttonrecordnoent).'<br>';
+$titletoaddnoent=$langs->transnoentitiesnoconv("Select");
+$buttonrecordnoent=$langs->transnoentitiesnoconv("RecordMovement");
+print '<span class="opacitymedium">'.$langs->trans("SelectProductInAndOutWareHouse",$titletoaddnoent,$buttonrecordnoent).'</span><br>';
 print '<br>'."\n";
 
 $var=true;
@@ -342,7 +344,7 @@ print '<input type="hidden" name="token" value="' .$_SESSION['newtoken'] . '">';
 print '<input type="hidden" name="action" value="addline">';
 
 
-print '<div class="div-table-responsive-no-max">';
+print '<div class="div-table-responsive-no-min">';
 print '<table class="liste" width="100%">';
 //print '<div class="tagtable centpercent">';
 
@@ -361,7 +363,7 @@ print getTitleFieldOfList('',0);
 print '</tr>';
 
 
-print '<tr '.$bc[$var].'>';
+print '<tr class="oddeven">';
 // Product
 print '<td class="titlefield">';
 $filtertype=0;
@@ -402,13 +404,13 @@ print '</tr>';
 
 foreach($listofdata as $key => $val)
 {
-	$var=!$var;
+
 
 	$productstatic->fetch($val['id_product']);
 	$warehousestatics->fetch($val['id_sw']);
 	$warehousestatict->fetch($val['id_tw']);
 
-	print '<tr '.$bc[$var].'>';
+	print '<tr class="oddeven">';
 	print '<td>';
 	print $productstatic->getNomUrl(1).' - '.$productstatic->label;
 	print '</td>';
@@ -444,14 +446,14 @@ print '<input type="hidden" name="token" value="' .$_SESSION['newtoken'] . '">';
 print '<input type="hidden" name="action" value="createmovements">';
 
 // Button to record mass movement
-$codemove=GETPOST('codemove');
+$codemove=(isset($_POST["codemove"])?GETPOST("codemove",'alpha'):dol_print_date(dol_now(),'%Y%m%d%H%M%S'));
 $labelmovement=GETPOST("label")?GETPOST('label'):$langs->trans("StockTransfer").' '.dol_print_date($now,'%Y-%m-%d %H:%M');
 
-print '<table class="border" width="100%">';
+print '<table class="noborder" width="100%">';
 	print '<tr>';
-	print '<td class="titlefield">'.$langs->trans("InventoryCode").'</td>';
+	print '<td class="titlefield fieldrequired">'.$langs->trans("InventoryCode").'</td>';
 	print '<td>';
-	print '<input type="text" name="codemove" size="10" value="'.dol_escape_htmltag($codemove).'">';
+	print '<input type="text" name="codemove" size="15" value="'.dol_escape_htmltag($codemove).'">';
 	print '</td>';
 	print '</tr>';
 	print '<tr>';

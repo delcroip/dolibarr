@@ -29,7 +29,7 @@
 require '../main.inc.php';
 require_once DOL_DOCUMENT_ROOT.'/core/lib/company.lib.php';
 
-$action = GETPOST('action');
+$action = GETPOST('action','aZ09');
 
 $langs->load("companies");
 
@@ -42,6 +42,9 @@ $object = new Societe($db);
 if ($id > 0) $object->fetch($id);
 
 $permissionnote=$user->rights->societe->creer;	// Used by the include of actions_setnotes.inc.php
+
+// Initialize technical object to manage hooks of page. Note that conf->hooks_modules contains array of hook context
+$hookmanager->initHooks(array('thirdpartynote','globalcard'));
 
 
 /*
@@ -62,7 +65,7 @@ if (! empty($conf->global->MAIN_HTML_TITLE) && preg_match('/thirdpartynameonly/'
 $help_url='EN:Module_Third_Parties|FR:Module_Tiers|ES:Empresas';
 llxHeader('',$title,$help_url);
 
-if ($id > 0)
+if ($object->id > 0)
 {
     /*
      * Affichage onglets
@@ -73,16 +76,16 @@ if ($id > 0)
 
     dol_fiche_head($head, 'note', $langs->trans("ThirdParty"), -1, 'company');
 
-    $linkback = '<a href="'.DOL_URL_ROOT.'/societe/list.php">'.$langs->trans("BackToList").'</a>';
-    
+    $linkback = '<a href="'.DOL_URL_ROOT.'/societe/list.php?restore_lastsearch_values=1">'.$langs->trans("BackToList").'</a>';
+
     dol_banner_tab($object, 'socid', $linkback, ($user->societe_id?0:1), 'rowid', 'nom');
 
     $cssclass='titlefield';
     //if ($action == 'editnote_public') $cssclass='titlefieldcreate';
     //if ($action == 'editnote_private') $cssclass='titlefieldcreate';
-    
+
     print '<div class="fichecenter">';
-    
+
     print '<div class="underbanner clearboth"></div>';
     print '<table class="border centpercent">';
 
@@ -112,13 +115,18 @@ if ($id > 0)
     print "</table>";
 
     print '</div>';
-    
+
     //print '<br>';
 
     //print '<div class="underbanner clearboth"></div>';
     include DOL_DOCUMENT_ROOT.'/core/tpl/notes.tpl.php';
 
     dol_fiche_end();
+}
+else
+{
+	$langs->load("errors");
+	print $langs->trans("ErrorRecordNotFound");
 }
 
 llxFooter();

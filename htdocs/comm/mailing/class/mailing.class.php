@@ -34,7 +34,7 @@ class Mailing extends CommonObject
 	public $element='mailing';
 	public $table_element='mailing';
 	public $picto='email';
-	
+
 	var $titre;
 	var $sujet;
 	var $body;
@@ -43,7 +43,7 @@ class Mailing extends CommonObject
 	var $bgimage;
 
 	var $statut;       // Status 0=Draft, 1=Validated, 2=Sent partially, 3=Sent completely
-	
+
 	var $email_from;
 	var $email_replyto;
 	var $email_errorsto;
@@ -80,8 +80,8 @@ class Mailing extends CommonObject
 		$this->statuts[2] = 'MailingStatusSentPartialy';
 		$this->statuts[3] = 'MailingStatusSentCompletely';
 
-		$this->statut_dest[0] = 'MailingStatusNotSent';
 		$this->statut_dest[-1] = 'MailingStatusError';
+		$this->statut_dest[0] = 'MailingStatusNotSent';
 		$this->statut_dest[1] = 'MailingStatusSent';
 		$this->statut_dest[2] = 'MailingStatusRead';
 		$this->statut_dest[3] = 'MailingStatusReadAndUnsubscribe';    // Read but ask to not be contacted anymore
@@ -159,11 +159,11 @@ class Mailing extends CommonObject
 		$sql .= " SET titre = '".$this->db->escape($this->titre)."'";
 		$sql .= ", sujet = '".$this->db->escape($this->sujet)."'";
 		$sql .= ", body = '".$this->db->escape($this->body)."'";
-		$sql .= ", email_from = '".$this->email_from."'";
-		$sql .= ", email_replyto = '".$this->email_replyto."'";
-		$sql .= ", email_errorsto = '".$this->email_errorsto."'";
-		$sql .= ", bgcolor = '".($this->bgcolor?$this->bgcolor:null)."'";
-		$sql .= ", bgimage = '".($this->bgimage?$this->bgimage:null)."'";
+		$sql .= ", email_from = '".$this->db->escape($this->email_from)."'";
+		$sql .= ", email_replyto = '".$this->db->escape($this->email_replyto)."'";
+		$sql .= ", email_errorsto = '".$this->db->escape($this->email_errorsto)."'";
+		$sql .= ", bgcolor = '".($this->bgcolor?$this->db->escape($this->bgcolor):null)."'";
+		$sql .= ", bgimage = '".($this->bgimage?$this->db->escape($this->bgimage):null)."'";
 		$sql .= " WHERE rowid = ".$this->id;
 
 		dol_syslog("Mailing::Update", LOG_DEBUG);
@@ -431,7 +431,7 @@ class Mailing extends CommonObject
 			return -1;
 		}
 	}
-	
+
 	/**
 	 *  Delete targets emailing
 	 *
@@ -481,11 +481,11 @@ class Mailing extends CommonObject
 		}
 	}
 
-	
+
 	/**
 	 *  Count number of target with status
 	 *
-	 *  @param  string	$mode   Mode ('alreadysent' = Sent success or error) 
+	 *  @param  string	$mode   Mode ('alreadysent' = Sent success or error, 'alreadysentok' = Sent success, 'alreadysentko' = Sent error)
 	 *  @return int        		Nb of target with status
 	 */
 	function countNbOfTargets($mode)
@@ -493,12 +493,14 @@ class Mailing extends CommonObject
 	    $sql = "SELECT COUNT(rowid) as nb FROM ".MAIN_DB_PREFIX."mailing_cibles";
 	    $sql.= " WHERE fk_mailing = ".$this->id;
 	    if ($mode == 'alreadysent') $sql.= " AND statut <> 0";
-	    else 
+	    elseif ($mode == 'alreadysentok') $sql.= " AND statut > 0";
+	    elseif ($mode == 'alreadysentko') $sql.= " AND statut = -1";
+	    else
 	    {
 	        $this->error='BadValueForParameterMode';
 	        return -2;
 	    }
-	     
+
 	    $resql=$this->db->query($sql);
 	    if ($resql)
 	    {
@@ -512,10 +514,10 @@ class Mailing extends CommonObject
 	    }
 	    return 0;
 	}
-	
+
 
 	/**
-	 *  Retourne le libelle du statut d'un mailing (brouillon, validee, ...
+	 *  Return label of status of emailing (draft, validated, ...)
 	 *
 	 *  @param	int		$mode          	0=libelle long, 1=libelle court, 2=Picto + Libelle court, 3=Picto, 4=Picto + Libelle long
 	 *  @return string        			Label
@@ -585,7 +587,7 @@ class Mailing extends CommonObject
 	 *  @param	strin	$desc			Desc error
 	 *  @return string        			Label
 	 */
-	static public function libStatutDest($statut,$mode=0,$desc='')
+	public static function libStatutDest($statut,$mode=0,$desc='')
 	{
 		global $langs;
 		$langs->load('mails');

@@ -33,14 +33,14 @@ $langs->load('loan');
 
 // Security check
 $id=GETPOST("id",'int');
-$action=GETPOST("action");
+$action=GETPOST('action','aZ09');
 $confirm=GETPOST('confirm');
 if ($user->societe_id) $socid=$user->societe_id;
 // TODO ajouter regle pour restreindre acces paiement
 //$result = restrictedArea($user, 'facture', $id,'');
 
 $payment = new PaymentLoan($db);
-if ($id > 0) 
+if ($id > 0)
 {
 	$result=$payment->fetch($id);
 	if (! $result) dol_print_error($db,'Failed to get payment id '.$id);
@@ -76,7 +76,7 @@ if ($action == 'confirm_valide' && $confirm == 'yes' && $user->rights->loan->wri
 	$db->begin();
 
 	$result=$payment->valide();
-	
+
 	if ($result > 0)
 	{
 		$db->commit();
@@ -141,7 +141,7 @@ if ($action == 'delete')
 if ($action == 'valide')
 {
 	$facid = $_GET['facid'];
-	print $form->formconfirm('card.php?id='.$payment->id.'&amp;facid='.$facid, $langs->trans("ValidatePayment"), $langs->trans("ConfirmValidatePayment"), 'confirm_valide','',0,2);	
+	print $form->formconfirm('card.php?id='.$payment->id.'&amp;facid='.$facid, $langs->trans("ValidatePayment"), $langs->trans("ConfirmValidatePayment"), 'confirm_valide','',0,2);
 }
 
 
@@ -220,14 +220,11 @@ if ($resql)
 
 	if ($num > 0)
 	{
-		$var=True;
-
 		while ($i < $num)
 		{
 			$objp = $db->fetch_object($resql);
 
-			$var=!$var;
-			print '<tr '.$bc[$var].'>';
+			print '<tr class="oddeven">';
 			// Ref
 			print '<td>';
 			$loan->fetch($objp->id);
@@ -250,7 +247,7 @@ if ($resql)
 			$i++;
 		}
 	}
-	$var=!$var;
+
 
 	print "</table>\n";
 	$db->free($resql);

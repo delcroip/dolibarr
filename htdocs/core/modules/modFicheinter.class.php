@@ -58,7 +58,6 @@ class modFicheinter extends DolibarrModules
         $this->version = 'dolibarr';
 
         $this->const_name = 'MAIN_MODULE_'.strtoupper($this->name);
-        $this->special = 0;
         $this->picto = "intervention";
 
         // Data directories to create when module is enabled
@@ -147,12 +146,12 @@ class modFicheinter extends DolibarrModules
         $this->rights[$r][4] = 'ficheinter_advance';      // Visible if option MAIN_USE_ADVANCED_PERMS is on
         $this->rights[$r][5] = 'unvalidate';
 
-        
+
         // Menus
         //-------
         $this->menu = 1;        // This module add menu entries. They are coded into menu manager.
-        
-        
+
+
         //Exports
         //--------
         $r=1;
@@ -172,7 +171,7 @@ class modFicheinter extends DolibarrModules
         $this->export_sql_end[$r] .=' LEFT JOIN '.MAIN_DB_PREFIX.'fichinterdet as fd ON f.rowid = fd.fk_fichinter,';
         $this->export_sql_end[$r] .=' '.MAIN_DB_PREFIX.'societe as s';
         $this->export_sql_end[$r] .=' WHERE f.fk_soc = s.rowid';
-        $this->export_sql_end[$r] .=' AND f.entity IN ('.getEntity('intervention',1).')';
+        $this->export_sql_end[$r] .=' AND f.entity IN ('.getEntity('intervention').')';
         $r++;
 
     }
@@ -194,8 +193,8 @@ class modFicheinter extends DolibarrModules
         $this->remove($options);
 
         $sql = array(
-			 "DELETE FROM ".MAIN_DB_PREFIX."document_model WHERE nom = '".$this->const[0][2]."' AND type = 'ficheinter' AND entity = ".$conf->entity,
-			 "INSERT INTO ".MAIN_DB_PREFIX."document_model (nom, type, entity) VALUES('".$this->const[0][2]."','ficheinter',".$conf->entity.")",
+			 "DELETE FROM ".MAIN_DB_PREFIX."document_model WHERE nom = '".$this->db->escape($this->const[0][2])."' AND type = 'ficheinter' AND entity = ".$conf->entity,
+			 "INSERT INTO ".MAIN_DB_PREFIX."document_model (nom, type, entity) VALUES('".$this->db->escape($this->const[0][2])."','ficheinter',".$conf->entity.")",
         );
 
         return $this->_init($sql,$options);

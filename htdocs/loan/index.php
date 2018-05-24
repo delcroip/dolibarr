@@ -37,11 +37,11 @@ $socid = GETPOST('socid', 'int');
 if ($user->societe_id) $socid=$user->societe_id;
 $result = restrictedArea($user, 'loan', '', '', '');
 
-$limit = GETPOST('limit')?GETPOST('limit','int'):$conf->liste_limit;
+$limit = GETPOST('limit','int')?GETPOST('limit','int'):$conf->liste_limit;
 $sortfield = GETPOST("sortfield",'alpha');
 $sortorder = GETPOST("sortorder",'alpha');
 $page = GETPOST("page",'int');
-if ($page == -1) { $page = 0; }
+if (empty($page) || $page == -1) { $page = 0; }     // If $page is not defined, or '' or -1
 $offset = $limit * $page;
 $pageprev = $page - 1;
 $pagenext = $page + 1;
@@ -55,7 +55,7 @@ $filtre=GETPOST("filtre");
 $optioncss = GETPOST('optioncss','alpha');
 
 // Purge search criteria
-if (GETPOST("button_removefilter_x") || GETPOST("button_removefilter")) // Both test are required to be compatible with all browsers
+if (GETPOST('button_removefilter_x','alpha') || GETPOST('button_removefilter','alpha')) // Both test are required to be compatible with all browsers
 {
     $search_ref="";
 	$search_label="";
@@ -76,9 +76,9 @@ $sql.= " SUM(pl.amount_capital) as alreadypayed";
 $sql.= " FROM ".MAIN_DB_PREFIX."loan as l LEFT JOIN ".MAIN_DB_PREFIX."payment_loan AS pl";
 $sql.= " ON l.rowid = pl.fk_loan";
 $sql.= " WHERE l.entity = ".$conf->entity;
-if ($search_amount)	$sql.=" AND l.capital='".$db->escape(price2num(trim($search_amount)))."'";
-if ($search_ref) 	$sql.=" AND l.rowid = ".$db->escape($search_ref);
-if ($search_label)	$sql.=" AND l.label LIKE '%".$db->escape($search_label)."%'";
+if ($search_amount)	$sql.= natural_search("l.capital", $search_amount, 1);
+if ($search_ref) 	$sql.= " AND l.rowid = ".$db->escape($search_ref);
+if ($search_label)	$sql.= natural_search("l.label", $search_label);
 if ($filtre) {
     $filtre=str_replace(":","=",$filtre);
     $sql .= " AND ".$filtre;
@@ -91,6 +91,11 @@ if (empty($conf->global->MAIN_DISABLE_FULL_SCANLIST))
 {
     $result = $db->query($sql);
     $nbtotalofrecords = $db->num_rows($result);
+    if (($page * $limit) > $nbtotalofrecords)	// if total resultset is smaller then paging size (filtering), goto and load page 0
+    {
+    	$page = 0;
+    	$offset = 0;
+    }
 }
 
 $sql.= $db->plimit($limit+1, $offset);
@@ -104,12 +109,20 @@ if ($resql)
 	$var=true;
 
     $param='';
-    if (! empty($contextpage) && $contextpage != $_SERVER["PHP_SELF"]) $param.='&contextpage='.$contextpage;
-    if ($limit > 0 && $limit != $conf->liste_limit) $param.='&limit='.$limit;
-    if ($search_ref) $param.="&amp;search_ref=".$search_ref;
-    if ($search_label) $param.="&amp;search_label=".$search_user;
-    if ($search_amount) $param.="&amp;search_amount=".$search_amount_ht;
-    if ($optioncss != '') $param.='&amp;optioncss='.$optioncss;
+    if (! empty($contextpage) && $contextpage != $_SERVER["PHP_SELF"]) $param.='&contextpage='.urlencode($contextpage);
+    if ($limit > 0 && $limit != $conf->liste_limit) $param.='&limit='.urlencode($limit);
+    if ($search_ref) $param.="&amp;search_ref=".urlencode($search_ref);
+    if ($search_label) $param.="&amp;search_label=".urlencode($search_user);
+    if ($search_amount) $param.="&amp;search_amount=".urlencode($search_amount_ht);
+    if ($optioncss != '') $param.='&amp;optioncss='.urlencode($optioncss);
+
+    $newcardbutton='';
+    if ($user->rights->loan->write)
+    {
+    	$newcardbutton='<a class="butActionNew" href="'.DOL_URL_ROOT.'/loan/card.php?action=create">'.$langs->trans('NewLoan');
+    	$newcardbutton.= '<span class="fa fa-plus-circle valignmiddle"></span>';
+    	$newcardbutton.= '</a>';
+    }
 
     print '<form method="POST" action="'.$_SERVER["PHP_SELF"].'">'."\n";
     if ($optioncss != '') print '<input type="hidden" name="optioncss" value="'.$optioncss.'">';
@@ -117,9 +130,10 @@ if ($resql)
 	print '<input type="hidden" name="action" value="list">';
 	print '<input type="hidden" name="sortfield" value="'.$sortfield.'">';
 	print '<input type="hidden" name="sortorder" value="'.$sortorder.'">';
+    print '<input type="hidden" name="page" value="'.$page.'">';
 	print '<input type="hidden" name="viewstatut" value="'.$viewstatut.'">';
-    
-    print_barre_liste($langs->trans("Loans"), $page, $_SERVER["PHP_SELF"], $param, $sortfield, $sortorder, '', $num, $nbtotalofrecords, 'title_accountancy.png', 0, '', '', $limit);
+
+	print_barre_liste($langs->trans("Loans"), $page, $_SERVER["PHP_SELF"], $param, $sortfield, $sortorder, '', $num, $nbtotalofrecords, 'title_accountancy.png', 0, $newcardbutton, '', $limit);
 
     print '<div class="div-table-responsive">';
     print '<table class="tagtable liste'.($moreforfilter?" listwithfilterbefore":"").'">'."\n";
@@ -138,14 +152,14 @@ if ($resql)
 	print '</tr>';
 
 	print '<tr class="liste_titre">';
-	print_liste_field_titre($langs->trans("Ref"),$_SERVER["PHP_SELF"],"l.rowid","",$param,"",$sortfield,$sortorder);
-	print_liste_field_titre($langs->trans("Label"),$_SERVER["PHP_SELF"],"l.label","",$param,'align="left"',$sortfield,$sortorder);
-	print_liste_field_titre($langs->trans("LoanCapital"),$_SERVER["PHP_SELF"],"l.capital","",$param,'align="right"',$sortfield,$sortorder);
-	print_liste_field_titre($langs->trans("DateStart"),$_SERVER["PHP_SELF"],"l.datestart","",$param,'align="center"',$sortfield,$sortorder);
-	print_liste_field_titre($langs->trans("Status"),$_SERVER["PHP_SELF"],"l.paid","",$param,'align="right"',$sortfield,$sortorder);
+	print_liste_field_titre("Ref",$_SERVER["PHP_SELF"],"l.rowid","",$param,"",$sortfield,$sortorder);
+	print_liste_field_titre("Label",$_SERVER["PHP_SELF"],"l.label","",$param,'align="left"',$sortfield,$sortorder);
+	print_liste_field_titre("LoanCapital",$_SERVER["PHP_SELF"],"l.capital","",$param,'align="right"',$sortfield,$sortorder);
+	print_liste_field_titre("DateStart",$_SERVER["PHP_SELF"],"l.datestart","",$param,'align="center"',$sortfield,$sortorder);
+	print_liste_field_titre("Status",$_SERVER["PHP_SELF"],"l.paid","",$param,'align="right"',$sortfield,$sortorder);
 	print_liste_field_titre('');
 	print "</tr>\n";
-	
+
 	while ($i < min($num,$limit))
 	{
 		$obj = $db->fetch_object($resql);
@@ -171,7 +185,7 @@ if ($resql)
 		print '<td align="right" class="nowrap">'.$loan_static->LibStatut($obj->paid,5,$obj->alreadypayed).'</a></td>';
 
 		print '<td></td>';
-		
+
         print "</tr>\n";
 
 		$i++;
